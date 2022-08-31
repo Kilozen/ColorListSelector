@@ -1,7 +1,7 @@
 local thisFile = "Canvas_tests.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
--- 8/24/22 -- 
+-- 8/25/22 -- 
 --[[ __Name__.lua -- Simple Color Picker UI for Love2D 
      These functions provide a pop-up, scrollable, list of colors which can be associated
      with objects on the screen (such as color-select buttons) to bring up the list, 
@@ -74,6 +74,308 @@ print("[" .. thisFile .. "] loaded/running.")
 
     Also, Publish this as an independent, reusable Module on GitHub. 
 ]]
+
+-------------------------------------------------------------
+--[[  Hex Color stuff -- (probably move to a separate file)
+    Todo: when doing this as a TEXT FILE, 
+    one line per line, or comma separators, but
+    allow people to use quotes or not, we should parse it either way. 
+    Also accept hex value preceeded by # or 0x or neither. 
+--]]
+
+local colorList = {
+    { "Red", 1, 0, 0 },
+    { "Yellow", 1, 1, 0 },
+    { "Magenta", 1, 0, 1 },
+    { "Green", 0, 1, 0 },
+    { "Cyan", 0, 1, 1 },
+    { "Blue", 0, 0, 1 },
+
+    { "Red", .6, 0, 0 },
+    { "Yellow", .6, .6, 0 },
+    { "Magenta", .6, 0, .6 },
+    { "Green", 0, .6, 0 },
+    { "Cyan", 0, .6, .6 },
+    { "Blue", 0, 0, .6 },
+}
+
+-- 3 hex values. need to convert to 3 RGB 
+local tmp = {
+    'FFFFFF',	'White',
+    'F7F9F9',	'Snowflake',
+    'EAEDEF',	'Whisp',
+    'D0CFD7',	'Whale',
+    'AFAFAF',	'Silver',
+    '888F8D',	'Gravel',
+}
+
+-- 3 hex values. need to convert to 3 RGB 
+local colorHexList = {
+'FFFFFF',	'White',
+'F7F9F9',	'Snowflake',
+'EAEDEF',	'Whisp',
+'D0CFD7',	'Whale',
+'AFAFAF',	'Silver',
+'888F8D',	'Gravel',
+'9C8E8D',	'Flt',
+'6A7185',	'Bluesteel',
+'636268',	'Stone',
+'5A6050',	'Tin',
+'545365',	'Spirit',
+'595451',	'Gloom',
+'4C4C4C',	'Coal',
+'4D484F',	'Gabbro',
+'413C40',	'Asphalt',
+'3B3736',	'Ash',
+'332D25',	'Basalt',
+'302722',	'Scoria',
+'1A1A1B',	'Black',
+'0E1011',	'Pitch',
+'1F1A23',	'Night',
+'22263D',	'Depth',
+'471A43',	'Blackberry',
+'4C2A4F',	'Berry',
+'553348',	'Loulou',
+'6E235D',	'Lilac',
+'863290',	'Grape',
+'9778BE',	'Petal',
+'7F6195',	'Satin',
+'5C415D',	'Haunted',
+'735B77',	'Ghost',
+'8E7F9E',	'Lavender',
+'A794B2',	'Amethyst',
+'AA96A6',	'Dart',
+'E1CDFE',	'Pansy',
+'CCA4E0',	'Bubble',
+'DA4FFF',	'Plum',
+'9C50D3',	'Purple',
+'993BD1',	'Eggplant',
+'7930B5',	'Midnight',
+'5317B5',	'Urchin',
+'4D2C89',	'Jelly',
+'3F2B66',	'Smog',
+'0D0A5B',	'Sapphire',
+'2B0D88',	'Angler',
+'2D237A',	'Bluebell',
+'484AA1',	'Aster',
+'525195',	'Smoke',
+'4866D5',	'Uranus',
+'757ADB',	'Rain',
+'7895C1',	'Stream',
+'444F69',	'Harpy',
+'324BA9',	'Blue',
+'212B5F',	'Denim',
+'013485',	'Morpho',
+'023AE2',	'Raindrop',
+'1C51E7',	'Marine',
+'2F83FF',	'Ocean',
+'6394DD',	'Drip',
+'76A8FF',	'Cool',
+'AEC8FF',	'Sky',
+'89A4C0',	'Cloud',
+'556979',	'Aluminum',
+'2F4557',	'Iron',
+'263746',	'Dream',
+'0D1E25',	'Abyss',
+'0B2D46',	'Trench',
+'0A3D67',	'Twilight',
+'094869',	'Mountain',
+'2B768F',	'Azure',
+'0086CE',	'Shell',
+'00B4D5',	'Cerulean',
+'B3E1F1',	'Winter',
+'91FFF7',	'Glow',
+'00FFF1',	'Cyan',
+'3CA2A4',	'Turquoise',
+'3A8684',	'History',
+'8DBCB4',	'Spruce',
+'72C4C4',	'Water',
+'9AEAEF',	'Glass',
+'E2FFE6',	'Pistachio',
+'B3FFD8',	'Dolphin',
+'9AFFC7',	'Mint',
+'B2E2BD',	'Seafoam',
+'A6DBA7',	'Caterpillar',
+'61AB89',	'Jade',
+'148E67',	'Spearmint',
+'1F565D',	'Essence',
+'233253',	'Rainforest',
+'153F4B',	'Seaweed',
+'114D41',	'Algae',
+'1F483A',	'Forest',
+'005D48',	'Hydra',
+'20603F',	'Emerald',
+'236825',	'Shamrock',
+'66903C',	'Pear',
+'1E361A',	'Jungle',
+'1E2716',	'Swamp',
+'1F281D',	'Root',
+'425035',	'Snake',
+'51684C',	'Camo',
+'516760',	'Scale',
+'687F67',	'Ivy',
+'97AF8B',	'Mantis',
+'A7B08C',	'Micah',
+'9BFF9D',	'Pea',
+'03ff7d',	'Synthesizer',
+'87E34D',	'Malachite',
+'7ECE73',	'Fern',
+'7BBD5D',	'Stem',
+'629C3F',	'Green',
+'567C34',	'Grass',
+'8ECE56',	'Cactus',
+'A5E32D',	'Leaf',
+'C6FF00',	'Toxin',
+'CDFE6C',	'Uranium',
+'9FFF00',	'Corrosion',
+'E8FCB4',	'Peridot',
+'D1E572',	'Cabbage',
+'B4CD3D',	'Chartreuse',
+'A9A032',	'Prehistoric',
+'828335',	'Alligator',
+'697135',	'Olive',
+'4B4420',	'Murk',
+'7E7645',	'Bark',
+'C18E1B',	'Amber',
+'BEA55D',	'Sponge',
+'D1B045',	'Haze',
+'D1B300',	'Swallowtail',
+'FFE63B',	'Lemon',
+'F9E255',	'Wasp',
+'F7FF6F',	'Yolk',
+'FFEC80',	'Banana',
+'FDD68B',	'Honey',
+'FDE9AC',	'Squash',
+'EDE8B0',	'Sanddollar',
+'FFFDEA',	'Mellow',
+'FDF1E1',	'Lychee',
+'FFEFDC',	'Creme',
+'F7DEBF',	'Pelt',
+'FFD297',	'Ivory',
+'F6BF6C',	'Peanut',
+'F2AD0C',	'Gold',
+'FFB53C',	'Marigold',
+'FA912B',	'Apricot',
+'FF8500',	'Poppy',
+'FF984F',	'Yam',
+'FFA147',	'Orange',
+'FFB576',	'Peach',
+'FCC4AD',	'Silt',
+'F0B392',	'Sahara',
+'D5602B',	'Saffron',
+'B2560D',	'Bronze',
+'B24407',	'Sandstone',
+'FF5500',	'Carrot',
+'EF5C23',	'Fire',
+'FF6841',	'Pumpkin',
+'FF7360',	'Sunrise',
+'C15A39',	'Cinnamon',
+'C47149',	'Caramel',
+'B27749',	'Acorn',
+'9A7B4F',	'Tortilla',
+'C3996F',	'Hide',
+'CABBA2',	'Beige',
+'827A64',	'Pine',
+'6D675B',	'Soil',
+'564D48',	'Coffee',
+'3C3030',	'Cocoa',
+'766259',	'Chocolate',
+'977B6C',	'Cappuccino',
+'BFA18F',	'Beach',
+'8A6059',	'Gingerbread',
+'7A4D4D',	'Maple',
+'774840',	'Hazel',
+'6B3C34',	'Coconut',
+'603E3D',	'Clay',
+'57372C',	'Sable',
+'432711',	'Penny',
+'301E1A',	'Umber',
+'22110A',	'Brownie',
+'2F1B1B',	'Birch',
+'5A4534',	'Feldspar',
+'72573A',	'Walnut',
+'855B33',	'Grain',
+'91532A',	'Ginger',
+'90553A',	'Starfish',
+'8E5B3F',	'Brown',
+'563012',	'Slate',
+'7B3C1D',	'Auburn',
+'A44B28',	'Copper',
+'8B3220',	'Rust',
+'BA311C',	'Tomato',
+'E22D18',	'Vermillion',
+'CE000D',	'Pepper',
+'AA0024',	'Cherry',
+'850012',	'Crimson',
+'7A0E1E',	'Ruby',
+'581014',	'Garnet',
+'2D0102',	'Sanguine',
+'451717',	'Blood',
+'652127',	'Rose',
+'8C272D',	'Cranberry',
+'C1272D',	'Redwood',
+'DF3236',	'Strawberry',
+'fc6d68',	'Fruit',
+'B13A3A',	'Carmine',
+'A12928',	'Cerise',
+'9A534D',	'Brick',
+'CC6F6F',	'Coral',
+'FEA0A0',	'Blush',
+'FFE2E6',	'Macaron',
+'FFB7B4',	'Sakura',
+'FEA1B3',	'Flamingo',
+'FFE5E5',	'Peony',
+'FF839B',	'Ribbon',
+'c67a80',	'Charm',
+'EB799A',	'Candy',
+'FB5E79',	'Bubblegum',
+'DB518D',	'Watermelon',
+'E934AA',	'Magenta',
+'E7008B',	'Fuschia',
+'cb0381',	'Tulip',
+'aa004c',	'Rubellite',
+'8A024A',	'Raspberry',
+'4D0F28',	'Syrah',
+'9C4975',	'Mauve',
+'E77FBF',	'Gum',
+'E5A9FF',	'Quartz',
+'E8CCFF',	'Confetti',
+'FFD6F6',	'Petalite',
+'FBEDFA',	'Pearl',
+}
+
+-- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua  {kmk}
+local function Hex2Color(hex, value)
+  --return {tonumber(string.sub(hex, 2, 3), 16)/256, tonumber(string.sub(hex, 4, 5), 16)/256, tonumber(string.sub(hex, 6, 7), 16)/256, value or 1}
+	return {tonumber(string.sub(hex, 1, 2), 16)/256, tonumber(string.sub(hex, 3, 4), 16)/256, tonumber(string.sub(hex, 5, 6), 16)/256, value or 1}
+end
+
+-- meh.. this is ugly but for testing now...
+local function convFlatPairsToColorList(flatTable)
+    local fixedList = {}
+
+    for i = 1, #flatTable, 2 do  -- read from input table, 2 at a time 
+        --print(flatTable[i], flatTable[i + 1])
+
+        -- convert hex to RGB... 
+        local rgb = Hex2Color(flatTable[i])
+
+        -- add new entry to end of the fixed format list 
+        fixedList[#fixedList + 1] = { flatTable[i + 1], rgb[1], rgb[2], rgb[3] }
+        local tt = fixedList[#fixedList]
+        print('{' .. tt[1], tt[2], tt[3], tt[4] .. '}')
+    end
+end
+
+
+print ("TESTING HERE...\n")
+--print(tmp[1])
+convFlatPairsToColorList(colorHexList)
+
+
+--local tmpColor = Hex2Color(tmp[1][1])
+
+-------------------------------------------------------------
 
 local touchscreen = false -- detect & set this during init
 
@@ -172,7 +474,7 @@ local function createAppCanvas()
 end
 
 
-local colorList = {
+local OLDcolorList = {
     { "Red", 1, 0, 0 },
     { "Yellow", 1, 1, 0 },
     { "Magenta", 1, 0, 1 },
