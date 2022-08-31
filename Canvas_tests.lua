@@ -1,7 +1,7 @@
 local thisFile = "Canvas_tests.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
---[[ -- 8/5/22 -- 
+--[[ -- 8/10/22 -- 
     TESTS for using a Canvas as a Scrolling select Menu 
     - draw a tall, thin canvas, with text & color boxes 
     - translate it to make it scroll on the screen 
@@ -10,13 +10,22 @@ print("[" .. thisFile .. "] loaded/running.")
     and a small 'app' canvas, & the color canvass within it. 
 
     TODO: 
-    -- get TWO color regions to work. 
-    -- get two buttons to launch the color picker. 
+    - get two screen objects to launch the color picker. 
+    - (when the picker is brought up, it should probably be in the same position it was left at)
 
-    -- make buttons work 
-    -- ? if you click (release?) without dragging (much) that triggers it? 
+    - if you click or hover on a color, it updates, if you click on an empty part of the screen, it stops updating (and the picker goes away)
+
+    - if mouse "hovers" outside the color picker area, the object should probably return to its previous color 
+
+    - OLD: 
+    ? if you click (release?) without dragging (much) that triggers it? 
     (draw a white box on the canvas to ack. a click)
     translate canvas coords back to colorList index 
+
+    -- implement PgUp/Dn keys? 
+
+    [] Think about writing this WHOLE thing to be "modular" / a separate, reusable file. 
+    and the specific buttons and colors are configured in a 3rd separate file. 
 ]]
 
 local lastClick = { -- used to carry x,y info of last click or touch
@@ -25,7 +34,7 @@ local lastClick = { -- used to carry x,y info of last click or touch
     y = 0
 }
 
-local x_workScreen = { -- approx size of the desktop being Developed on
+local xx_workScreen = { -- approx size of the desktop being Developed on
     width = 2000,
     height = 1000,
     xPos = 5,
@@ -46,25 +55,47 @@ local appCanvas = { -- the "full screen" of the app (small smartphone size by de
     height = 360 * 1,
 }
 
-local objectColor = { .6, .4, .4 }
 
--- draw the CONTENT of the app
+
+local testObj1 = {
+    x = 50,
+    y = 100,
+    width = 300,
+    height = 100,
+    color = { .6, .4, .4 } -- default starting color
+}
+
+local testObj2 = {
+    x = 50,
+    y = 220,
+    width = 300,
+    height = 100,
+    color = { .4, .4, .6 } -- default starting color
+}
+
+local testObjList = { testObj1, testObj2 } -- test objects (rectangles) to color on screen
+local selectedObject = 1 -- begin with region 1 already selected by default
+
+
+-- draw the "Content" of the app
 local function drawAppWindow()
 
-    -- just draw any old thing on it as a placeholder...
-    local mode = "fill"
-    local x = 100
-    local y = 100
-    local recWidth = 250
-    local recHeight = 200
-    local rx = nil -- 10
-    local ry = nil
-    local segments = nil -- 5
+    for i in ipairs(testObjList) do
+        -- just draw any old thing on it as a placeholder...
+        local x = testObjList[i].x
+        local y = testObjList[i].y
+        local recWidth = testObjList[i].width
+        local recHeight = testObjList[i].height
 
-    --love.graphics.setColor(.6, .4, .4)
-    --print(objectColor[1], objectColor[2], objectColor[3])
-    love.graphics.setColor(objectColor[1], objectColor[2], objectColor[3])
-    love.graphics.rectangle(mode, x, y, recWidth, recHeight, rx, ry, segments)
+        love.graphics.setColor(testObjList[i].color)
+
+        local mode = "fill"
+        local rx = nil -- 10  -- if you want rounded corners...
+        local ry = nil
+        local segments = nil -- 5
+        love.graphics.rectangle(mode, x, y, recWidth, recHeight, rx, ry, segments)
+    end
+
 end
 
 
@@ -215,16 +246,19 @@ function love.update(dt)
     if (love.mouse.getX() > colorCanvas.xPos) and
         (love.mouse.getX() < colorCanvas.xPos + colorCanvas.width)
     then
-
         local ccy = love.mouse.getY() - colorCanvas.yPos -- cursor y position on the colorCanvas
-        local buttonNum = ccYtoB(ccy)
-        print(love.mouse.getY(), ccy, "button", buttonNum, colorList[buttonNum][1],
-            colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4])
+        local buttonNum = ccYtoB(ccy) -- get the ID of the Button ID the cursor is on
 
-        objectColor[1] = colorList[buttonNum][2]
-        objectColor[2] = colorList[buttonNum][3]
-        objectColor[3] = colorList[buttonNum][4]
-        --objectColor = { .6, .4, .4 }
+        -- print mouse position, button, etc...
+        -- print(love.mouse.getY(), ccy, "button", buttonNum,
+        --     colorList[buttonNum][1], colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4])
+
+        -- update the color of the currently "selected" object
+        if selectedObject ~= 0 then
+            local selObj = testObjList[selectedObject]
+            selObj.color = { colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4] }
+        end
+
 
         -- if a click/press is 'active' the colorCanvas can be "dragged"
         if lastClick.active then
@@ -255,8 +289,30 @@ end
 
 
 function love.mousepressed(x, y, button, istouch, presses) -- should work for both mouseclick & touchscreen...
-    print(x, y)
-    -- love.graphics.rectangle("fill", x, y, 10, 10) -- no, can't draw in a callback.
+    -- keep both mouse & touchscreeen in mind here!
+
+    print("mousepressed = " .. x, y)
+    -- love.graphics.rectangle("fill", x, y, 10, 10) -- no, can't draw from inside a callback.
+
+    -- if clicking in the color-picker area...
+    if x > colorCanvas.xPos then
+        -- don't change the object selection 
+    else
+        -- de-select current object if clicking outisde the color picker area
+        selectedObject = 0
+    end
+
+    -- check if any screen objects got clicked:
+    for i in ipairs(testObjList) do
+        local o = testObjList[i]
+        if x > o.x and y > o.y and x < (o.x + o.width) and y < (o.y + o.height) then
+            selectedObject = i
+        end
+    end
+    -- []? also check for clicks on color buttons?...
+
+
+    -- keeping track of the last mouse-down gets used in *dragging* interactions
     lastClick.active = true
     lastClick.x = x
     lastClick.y = y
