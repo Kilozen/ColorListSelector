@@ -62,9 +62,16 @@ print("[" .. thisFile .. "] loaded/running.")
     so touchscreen clicks may be handled a bit differently. 
 
     TODO: 
+    - make a command to "Random Pick"? 
+    - make PgUp/Dn arrows for touchscreen? 
+    - (future: make a mini-list sidebar for faster scrolling?)
+
     - modularize this & describe "how to use" it. 
 
-    - implement PgUp/Dn keys? 
+    - limitation: ~288 colors works on desktop, but results in a canvass that is TOO BIG for android l2d.
+    - (figure out what the limit is, and why.)
+
+    - bug: scroll wheel & PgUp/Dn can move the window when it's invisible 
     - draw a white box on buttons to ack. a selection? 
     - cosmetic improvements (rounded buttons?)
     - make fit more exact for any mobile screen (scale?)
@@ -83,297 +90,290 @@ print("[" .. thisFile .. "] loaded/running.")
     Also accept hex value preceeded by # or 0x or neither. 
 --]]
 
-local colorList = {
+local colorList = { -- DEFAULT "test" color list... it's ok for later code to overwrite this.
+    { "Test Colors", 1, 1, 1 },
     { "Red", 1, 0, 0 },
     { "Yellow", 1, 1, 0 },
     { "Magenta", 1, 0, 1 },
     { "Green", 0, 1, 0 },
     { "Cyan", 0, 1, 1 },
     { "Blue", 0, 0, 1 },
-
-    { "Red", .6, 0, 0 },
-    { "Yellow", .6, .6, 0 },
-    { "Magenta", .6, 0, .6 },
-    { "Green", 0, .6, 0 },
-    { "Cyan", 0, .6, .6 },
-    { "Blue", 0, 0, .6 },
+    { "dRed", .6, 0, 0 },
+    { "dYellow", .6, .6, 0 },
+    { "dMagenta", .6, 0, .6 },
+    { "dGreen", 0, .6, 0 },
+    { "dCyan", 0, .6, .6 },
+    { "dBlue", 0, 0, .6 },
 }
 
--- 3 hex values. need to convert to 3 RGB 
-local tmp = {
-    'FFFFFF',	'White',
-    'F7F9F9',	'Snowflake',
-    'EAEDEF',	'Whisp',
-    'D0CFD7',	'Whale',
-    'AFAFAF',	'Silver',
-    '888F8D',	'Gravel',
-}
 
--- 3 hex values. need to convert to 3 RGB 
+-- 3 hex values. need to convert to 3 RGB
+-- kmk: currently the canvas size of this list is too big for android to handle...
 local colorHexList = {
-'FFFFFF',	'White',
-'F7F9F9',	'Snowflake',
-'EAEDEF',	'Whisp',
-'D0CFD7',	'Whale',
-'AFAFAF',	'Silver',
-'888F8D',	'Gravel',
-'9C8E8D',	'Flt',
-'6A7185',	'Bluesteel',
-'636268',	'Stone',
-'5A6050',	'Tin',
-'545365',	'Spirit',
-'595451',	'Gloom',
-'4C4C4C',	'Coal',
-'4D484F',	'Gabbro',
-'413C40',	'Asphalt',
-'3B3736',	'Ash',
-'332D25',	'Basalt',
-'302722',	'Scoria',
-'1A1A1B',	'Black',
-'0E1011',	'Pitch',
-'1F1A23',	'Night',
-'22263D',	'Depth',
-'471A43',	'Blackberry',
-'4C2A4F',	'Berry',
-'553348',	'Loulou',
-'6E235D',	'Lilac',
-'863290',	'Grape',
-'9778BE',	'Petal',
-'7F6195',	'Satin',
-'5C415D',	'Haunted',
-'735B77',	'Ghost',
-'8E7F9E',	'Lavender',
-'A794B2',	'Amethyst',
-'AA96A6',	'Dart',
-'E1CDFE',	'Pansy',
-'CCA4E0',	'Bubble',
-'DA4FFF',	'Plum',
-'9C50D3',	'Purple',
-'993BD1',	'Eggplant',
-'7930B5',	'Midnight',
-'5317B5',	'Urchin',
-'4D2C89',	'Jelly',
-'3F2B66',	'Smog',
-'0D0A5B',	'Sapphire',
-'2B0D88',	'Angler',
-'2D237A',	'Bluebell',
-'484AA1',	'Aster',
-'525195',	'Smoke',
-'4866D5',	'Uranus',
-'757ADB',	'Rain',
-'7895C1',	'Stream',
-'444F69',	'Harpy',
-'324BA9',	'Blue',
-'212B5F',	'Denim',
-'013485',	'Morpho',
-'023AE2',	'Raindrop',
-'1C51E7',	'Marine',
-'2F83FF',	'Ocean',
-'6394DD',	'Drip',
-'76A8FF',	'Cool',
-'AEC8FF',	'Sky',
-'89A4C0',	'Cloud',
-'556979',	'Aluminum',
-'2F4557',	'Iron',
-'263746',	'Dream',
-'0D1E25',	'Abyss',
-'0B2D46',	'Trench',
-'0A3D67',	'Twilight',
-'094869',	'Mountain',
-'2B768F',	'Azure',
-'0086CE',	'Shell',
-'00B4D5',	'Cerulean',
-'B3E1F1',	'Winter',
-'91FFF7',	'Glow',
-'00FFF1',	'Cyan',
-'3CA2A4',	'Turquoise',
-'3A8684',	'History',
-'8DBCB4',	'Spruce',
-'72C4C4',	'Water',
-'9AEAEF',	'Glass',
-'E2FFE6',	'Pistachio',
-'B3FFD8',	'Dolphin',
-'9AFFC7',	'Mint',
-'B2E2BD',	'Seafoam',
-'A6DBA7',	'Caterpillar',
-'61AB89',	'Jade',
-'148E67',	'Spearmint',
-'1F565D',	'Essence',
-'233253',	'Rainforest',
-'153F4B',	'Seaweed',
-'114D41',	'Algae',
-'1F483A',	'Forest',
-'005D48',	'Hydra',
-'20603F',	'Emerald',
-'236825',	'Shamrock',
-'66903C',	'Pear',
-'1E361A',	'Jungle',
-'1E2716',	'Swamp',
-'1F281D',	'Root',
-'425035',	'Snake',
-'51684C',	'Camo',
-'516760',	'Scale',
-'687F67',	'Ivy',
-'97AF8B',	'Mantis',
-'A7B08C',	'Micah',
-'9BFF9D',	'Pea',
-'03ff7d',	'Synthesizer',
-'87E34D',	'Malachite',
-'7ECE73',	'Fern',
-'7BBD5D',	'Stem',
-'629C3F',	'Green',
-'567C34',	'Grass',
-'8ECE56',	'Cactus',
-'A5E32D',	'Leaf',
-'C6FF00',	'Toxin',
-'CDFE6C',	'Uranium',
-'9FFF00',	'Corrosion',
-'E8FCB4',	'Peridot',
-'D1E572',	'Cabbage',
-'B4CD3D',	'Chartreuse',
-'A9A032',	'Prehistoric',
-'828335',	'Alligator',
-'697135',	'Olive',
-'4B4420',	'Murk',
-'7E7645',	'Bark',
-'C18E1B',	'Amber',
-'BEA55D',	'Sponge',
-'D1B045',	'Haze',
-'D1B300',	'Swallowtail',
-'FFE63B',	'Lemon',
-'F9E255',	'Wasp',
-'F7FF6F',	'Yolk',
-'FFEC80',	'Banana',
-'FDD68B',	'Honey',
-'FDE9AC',	'Squash',
-'EDE8B0',	'Sanddollar',
-'FFFDEA',	'Mellow',
-'FDF1E1',	'Lychee',
-'FFEFDC',	'Creme',
-'F7DEBF',	'Pelt',
-'FFD297',	'Ivory',
-'F6BF6C',	'Peanut',
-'F2AD0C',	'Gold',
-'FFB53C',	'Marigold',
-'FA912B',	'Apricot',
-'FF8500',	'Poppy',
-'FF984F',	'Yam',
-'FFA147',	'Orange',
-'FFB576',	'Peach',
-'FCC4AD',	'Silt',
-'F0B392',	'Sahara',
-'D5602B',	'Saffron',
-'B2560D',	'Bronze',
-'B24407',	'Sandstone',
-'FF5500',	'Carrot',
-'EF5C23',	'Fire',
-'FF6841',	'Pumpkin',
-'FF7360',	'Sunrise',
-'C15A39',	'Cinnamon',
-'C47149',	'Caramel',
-'B27749',	'Acorn',
-'9A7B4F',	'Tortilla',
-'C3996F',	'Hide',
-'CABBA2',	'Beige',
-'827A64',	'Pine',
-'6D675B',	'Soil',
-'564D48',	'Coffee',
-'3C3030',	'Cocoa',
-'766259',	'Chocolate',
-'977B6C',	'Cappuccino',
-'BFA18F',	'Beach',
-'8A6059',	'Gingerbread',
-'7A4D4D',	'Maple',
-'774840',	'Hazel',
-'6B3C34',	'Coconut',
-'603E3D',	'Clay',
-'57372C',	'Sable',
-'432711',	'Penny',
-'301E1A',	'Umber',
-'22110A',	'Brownie',
-'2F1B1B',	'Birch',
-'5A4534',	'Feldspar',
-'72573A',	'Walnut',
-'855B33',	'Grain',
-'91532A',	'Ginger',
-'90553A',	'Starfish',
-'8E5B3F',	'Brown',
-'563012',	'Slate',
-'7B3C1D',	'Auburn',
-'A44B28',	'Copper',
-'8B3220',	'Rust',
-'BA311C',	'Tomato',
-'E22D18',	'Vermillion',
-'CE000D',	'Pepper',
-'AA0024',	'Cherry',
-'850012',	'Crimson',
-'7A0E1E',	'Ruby',
-'581014',	'Garnet',
-'2D0102',	'Sanguine',
-'451717',	'Blood',
-'652127',	'Rose',
-'8C272D',	'Cranberry',
-'C1272D',	'Redwood',
-'DF3236',	'Strawberry',
-'fc6d68',	'Fruit',
-'B13A3A',	'Carmine',
-'A12928',	'Cerise',
-'9A534D',	'Brick',
-'CC6F6F',	'Coral',
-'FEA0A0',	'Blush',
-'FFE2E6',	'Macaron',
-'FFB7B4',	'Sakura',
-'FEA1B3',	'Flamingo',
-'FFE5E5',	'Peony',
-'FF839B',	'Ribbon',
-'c67a80',	'Charm',
-'EB799A',	'Candy',
-'FB5E79',	'Bubblegum',
-'DB518D',	'Watermelon',
-'E934AA',	'Magenta',
-'E7008B',	'Fuschia',
-'cb0381',	'Tulip',
-'aa004c',	'Rubellite',
-'8A024A',	'Raspberry',
-'4D0F28',	'Syrah',
-'9C4975',	'Mauve',
-'E77FBF',	'Gum',
-'E5A9FF',	'Quartz',
-'E8CCFF',	'Confetti',
-'FFD6F6',	'Petalite',
-'FBEDFA',	'Pearl',
+    'FFFFFF', 'White',
+    'F7F9F9', 'Snowflake',
+    'EAEDEF', 'Whisp',
+    'D0CFD7', 'Whale',
+    'AFAFAF', 'Silver',
+    '888F8D', 'Gravel',
+    '9C8E8D', 'Felt',
+    '6A7185', 'Bluesteel',
+    '636268', 'Stone',
+    '5A6050', 'Tin',
+    '545365', 'Spirit',
+    '595451', 'Gloom',
+    '4C4C4C', 'Coal',
+    '4D484F', 'Gabbro',
+    '413C40', 'Asphalt',
+    '3B3736', 'Ash',
+    '332D25', 'Basalt',
+    '302722', 'Scoria',
+    '1A1A1B', 'Black',
+    '0E1011', 'Pitch',
+    '1F1A23', 'Night',
+    '22263D', 'Depth',
+    '471A43', 'Blackberry',
+    '4C2A4F', 'Berry',
+    '553348', 'Loulou',
+    '6E235D', 'Lilac',
+    '863290', 'Grape',
+    '9778BE', 'Petal',
+    '7F6195', 'Satin',
+    '5C415D', 'Haunted',
+    '735B77', 'Ghost',
+    '8E7F9E', 'Lavender',
+    'A794B2', 'Amethyst',
+    'AA96A6', 'Dart',
+    'E1CDFE', 'Pansy',
+    'CCA4E0', 'Bubble',
+    'DA4FFF', 'Plum',
+    '9C50D3', 'Purple',
+    '993BD1', 'Eggplant',
+    '7930B5', 'Midnight',
+    '5317B5', 'Urchin',
+    '4D2C89', 'Jelly',
+    '3F2B66', 'Smog',
+    '0D0A5B', 'Sapphire',
+    '2B0D88', 'Angler',
+    '2D237A', 'Bluebell',
+    '484AA1', 'Aster',
+    '525195', 'Smoke',
+    '4866D5', 'Uranus',
+    '757ADB', 'Rain',
+    '7895C1', 'Stream',
+    '444F69', 'Harpy',
+    '324BA9', 'Blue',
+    '212B5F', 'Denim',
+    '013485', 'Morpho',
+    '023AE2', 'Raindrop',
+    '1C51E7', 'Marine',
+    '2F83FF', 'Ocean',
+    '6394DD', 'Drip',
+    '76A8FF', 'Cool',
+    'AEC8FF', 'Sky',
+    '89A4C0', 'Cloud',
+    '556979', 'Aluminum',
+    '2F4557', 'Iron',
+    '263746', 'Dream',
+    '0D1E25', 'Abyss',
+    '0B2D46', 'Trench',
+    '0A3D67', 'Twilight',
+    '094869', 'Mountain',
+    '2B768F', 'Azure',
+    '0086CE', 'Shell',
+    '00B4D5', 'Cerulean',
+    'B3E1F1', 'Winter',
+    '91FFF7', 'Glow',
+    '00FFF1', 'Cyan',
+    '3CA2A4', 'Turquoise',
+    '3A8684', 'History',
+    '8DBCB4', 'Spruce',
+    '72C4C4', 'Water',
+    '9AEAEF', 'Glass',
+    'E2FFE6', 'Pistachio',
+    'B3FFD8', 'Dolphin',
+    '9AFFC7', 'Mint',
+    'B2E2BD', 'Seafoam',
+    'A6DBA7', 'Caterpillar',
+    '61AB89', 'Jade',
+    '148E67', 'Spearmint',
+    '1F565D', 'Essence',
+    '233253', 'Rainforest',
+    '153F4B', 'Seaweed',
+    '114D41', 'Algae',
+    '1F483A', 'Forest',
+    '005D48', 'Hydra',
+    '20603F', 'Emerald',
+    '236825', 'Shamrock',
+    '66903C', 'Pear',
+    '1E361A', 'Jungle',
+    '1E2716', 'Swamp',
+    '1F281D', 'Root',
+    '425035', 'Snake',
+    '51684C', 'Camo',
+    '516760', 'Scale',
+    '687F67', 'Ivy',
+    '97AF8B', 'Mantis',
+    'A7B08C', 'Micah',
+    '9BFF9D', 'Pea',
+    '03ff7d', 'Synthesizer',
+    '87E34D', 'Malachite',
+    '7ECE73', 'Fern',
+    '7BBD5D', 'Stem',
+    '629C3F', 'Green',
+    '567C34', 'Grass',
+    '8ECE56', 'Cactus',
+    'A5E32D', 'Leaf',
+    'C6FF00', 'Toxin',
+    'CDFE6C', 'Uranium',
+    '9FFF00', 'Corrosion',
+    'E8FCB4', 'Peridot',
+    'D1E572', 'Cabbage',
+    'B4CD3D', 'Chartreuse',
+    'A9A032', 'Prehistoric',
+    '828335', 'Alligator',
+    '697135', 'Olive',
+    '4B4420', 'Murk',
+    '7E7645', 'Bark',
+    'C18E1B', 'Amber',
+    'BEA55D', 'Sponge',
+    'D1B045', 'Haze',
+    'D1B300', 'Swallowtail',
+    'FFE63B', 'Lemon',
+    'F9E255', 'Wasp',
+    'F7FF6F', 'Yolk',
+    'FFEC80', 'Banana',
+    'FDD68B', 'Honey',
+    'FDE9AC', 'Squash',
+    'EDE8B0', 'Sanddollar',
+    'FFFDEA', 'Mellow',
+    'FDF1E1', 'Lychee',
+    'FFEFDC', 'Creme',
+    'F7DEBF', 'Pelt',
+    'FFD297', 'Ivory',
+    'F6BF6C', 'Peanut',
+    'F2AD0C', 'Gold',
+    'FFB53C', 'Marigold',
+    'FA912B', 'Apricot',
+    'FF8500', 'Poppy',
+    'FF984F', 'Yam',
+    'FFA147', 'Orange',
+    'FFB576', 'Peach',
+    'FCC4AD', 'Silt',
+    'F0B392', 'Sahara',
+    'D5602B', 'Saffron',
+    'B2560D', 'Bronze',
+    'B24407', 'Sandstone',
+    'FF5500', 'Carrot',
+    'EF5C23', 'Fire',
+    'FF6841', 'Pumpkin',
+    'FF7360', 'Sunrise',
+    'C15A39', 'Cinnamon',
+    'C47149', 'Caramel',
+    'B27749', 'Acorn',
+    '9A7B4F', 'Tortilla',
+    'C3996F', 'Hide',
+    'CABBA2', 'Beige',
+    '827A64', 'Pine',
+    '6D675B', 'Soil',
+    '564D48', 'Coffee',
+    '3C3030', 'Cocoa',
+    '766259', 'Chocolate',
+    '977B6C', 'Cappuccino',
+    'BFA18F', 'Beach',
+    '8A6059', 'Gingerbread',
+    '7A4D4D', 'Maple',
+    '774840', 'Hazel',
+    '6B3C34', 'Coconut',
+    '603E3D', 'Clay',
+    '57372C', 'Sable',
+    '432711', 'Penny',
+    '301E1A', 'Umber',
+    '22110A', 'Brownie',
+    '2F1B1B', 'Birch',
+    '5A4534', 'Feldspar',
+    '72573A', 'Walnut',
+    '855B33', 'Grain',
+    '91532A', 'Ginger',
+    '90553A', 'Starfish',
+    '8E5B3F', 'Brown',
+    '563012', 'Slate',
+    '7B3C1D', 'Auburn',
+    'A44B28', 'Copper',
+    '8B3220', 'Rust',
+    'BA311C', 'Tomato',
+    'E22D18', 'Vermillion',
+    'CE000D', 'Pepper',
+    'AA0024', 'Cherry',
+    '850012', 'Crimson',
+    '7A0E1E', 'Ruby',
+    '581014', 'Garnet',
+    '2D0102', 'Sanguine',
+    '451717', 'Blood',
+    '652127', 'Rose',
+    '8C272D', 'Cranberry',
+    'C1272D', 'Redwood',
+    'DF3236', 'Strawberry',
+    'fc6d68', 'Fruit',
+    'B13A3A', 'Carmine',
+    'A12928', 'Cerise',
+    '9A534D', 'Brick',
+    'CC6F6F', 'Coral',
+    'FEA0A0', 'Blush',
+    'FFE2E6', 'Macaron',
+    'FFB7B4', 'Sakura',
+    'FEA1B3', 'Flamingo',
+    'FFE5E5', 'Peony',
+    'FF839B', 'Ribbon',
+    'c67a80', 'Charm',
+    'EB799A', 'Candy',
+    'FB5E79', 'Bubblegum',
+    'DB518D', 'Watermelon',
+    'E934AA', 'Magenta',
+    'E7008B', 'Fuschia',
+    'cb0381', 'Tulip',
+    'aa004c', 'Rubellite',
+    '8A024A', 'Raspberry',
+    '4D0F28', 'Syrah',
+    '9C4975', 'Mauve',
+    'E77FBF', 'Gum',
+    'E5A9FF', 'Quartz',
+    'E8CCFF', 'Confetti',
+    'FFD6F6', 'Petalite',
+    'FBEDFA', 'Pearl',
 }
 
 -- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua  {kmk}
 local function Hex2Color(hex, value)
-  --return {tonumber(string.sub(hex, 2, 3), 16)/256, tonumber(string.sub(hex, 4, 5), 16)/256, tonumber(string.sub(hex, 6, 7), 16)/256, value or 1}
-	return {tonumber(string.sub(hex, 1, 2), 16)/256, tonumber(string.sub(hex, 3, 4), 16)/256, tonumber(string.sub(hex, 5, 6), 16)/256, value or 1}
+    --return {tonumber(string.sub(hex, 2, 3), 16)/256, tonumber(string.sub(hex, 4, 5), 16)/256, tonumber(string.sub(hex, 6, 7), 16)/256, value or 1}
+    return { tonumber(string.sub(hex, 1, 2), 16) / 256, tonumber(string.sub(hex, 3, 4), 16) / 256,
+        tonumber(string.sub(hex, 5, 6), 16) / 256, value or 1 }
 end
+
 
 -- meh.. this is ugly but for testing now...
 local function convFlatPairsToColorList(flatTable)
     local fixedList = {}
 
-    for i = 1, #flatTable, 2 do  -- read from input table, 2 at a time 
+    for i = 1, #flatTable, 2 do -- read from input table, 2 at a time
         --print(flatTable[i], flatTable[i + 1])
 
-        -- convert hex to RGB... 
+        -- convert hex to RGB...
         local rgb = Hex2Color(flatTable[i])
 
-        -- add new entry to end of the fixed format list 
+        -- add new entry to end of the fixed format list
         fixedList[#fixedList + 1] = { flatTable[i + 1], rgb[1], rgb[2], rgb[3] }
         local tt = fixedList[#fixedList]
         print('{' .. tt[1], tt[2], tt[3], tt[4] .. '}')
     end
+    return fixedList
 end
 
 
-print ("TESTING HERE...\n")
+print("TESTING HERE...\n")
 --print(tmp[1])
-convFlatPairsToColorList(colorHexList)
+--local colorList = convFlatPairsToColorList(colorHexList)  -- create the BIG color list. 
 
-
---local tmpColor = Hex2Color(tmp[1][1])
 
 -------------------------------------------------------------
 
@@ -401,6 +401,7 @@ local workScreen = { -- size of the target Hardware Platform Screen
     resizable = false
 }
 
+-- kmk To Do:  figure out if appCanvas should be based on workScreen, or v/v...
 
 local appCanvas = { -- the "full screen" of the app (small smartphone size by default)
     width = 640 * 1,
@@ -408,14 +409,14 @@ local appCanvas = { -- the "full screen" of the app (small smartphone size by de
 }
 
 
-local testObj1 = {  -- rectangle ~button wtih a text label 
+local testObj1 = { -- rectangle ~button wtih a text label
     x = 50,
     y = 100,
     width = 300,
     height = 100,
     color = { .6, .4, .4 }, -- default starting color
     color_previous = { .6, .4, .4 },
-    text = "Primary"   -- text label on the button 
+    text = "Primary" -- text label on the button
 }
 
 local testObj2 = {
@@ -429,7 +430,7 @@ local testObj2 = {
 }
 
 local testObjList = { testObj1, testObj2 } -- test objects (rectangles) to color on screen
-local selectedObject = 0   -- the Currently Selected (touched) object 
+local selectedObject = 0 -- the Currently Selected (touched) object
 
 
 -- draw the "Content" of the app
@@ -491,22 +492,22 @@ local OLDcolorList = {
 }
 
 
+local buttonHeight = 30 -- default 30
+local buttonSpacing = 6 -- default 6
+
 local colorCanvas = { -- size of the (usually hidden) color picker
     active = false,
     width = 200,
-    height = 700,  -- todo: calculate this from color list size 
-    speed = 8,  -- scroll speed for things like arrow keys 
+    height = 500, -- this is just an initial value, it's actually calculated in createColorCanvas()
+    speed = 8, -- scroll speed for things like arrow keys
     xPos = 400, -- x position on the app screen
     yPos = 0, -- the y coordinate will change when user scrolls the window
     yStartDr = 0, -- the y position of the canvas at the start of a Drag
 }
 
 
-local buttonHeight = 30 -- default 30
-local buttonSpacing = 6 -- default 6
-
-local function ccBtoY(button) -- colorCanvas Button # --> Y coord 
-    -- basically: button number * height ... with a few tweaks. 
+local function ccBtoY(button) -- colorCanvas Button # --> Y coord
+    -- basically: button number * height ... with a few tweaks.
     local y = (button - 1) * (buttonHeight + buttonSpacing)
     return y
 end
@@ -517,7 +518,7 @@ local function ccYtoB(y) -- colorCanvas Y coord --> Button #
     -- so shifting y at least centers it better:
     y = y + (buttonSpacing / 2)
 
-    -- basically: y coordinate / buttonHeight 
+    -- basically: y coordinate / buttonHeight
     local button = (y / (buttonHeight + buttonSpacing)) + 1
     button = math.floor(button)
 
@@ -541,7 +542,7 @@ local function drawColorWindow()
     love.graphics.setFont(love.graphics.newFont(buttonHeight - 6))
 
     -- draw each color sample rectangle and color name
-    for i = 1, #colorList do  -- (could have used ipairs)
+    for i = 1, #colorList do -- (could have used ipairs)
         love.graphics.setColor(colorList[i][2], colorList[i][3], colorList[i][4])
 
         y = ccBtoY(i) -- get Y coordinate to use for next button
@@ -557,6 +558,10 @@ end
 -- this is a *static* canvas, drawn once at startup:
 -- just create the canvas object, and draw it (once) in the background.
 local function createColorCanvas()
+
+    local y = ccBtoY(#colorList + 1) -- get Y coordinate of the LAST color button
+
+    colorCanvas.height = y -- todo: calculate this from color list size
     ColorsCanvas = love.graphics.newCanvas(colorCanvas.width, colorCanvas.height)
 
     love.graphics.setCanvas(ColorsCanvas) -- draw to the other canvas...
@@ -586,7 +591,7 @@ function love.load()
     -- (manually painting the "app canvas" into the main window gives flexibility to show all 'windows' during development)
     createAppCanvas()
 
-    colorCanvas.yPos = 0
+    colorCanvas.yPos = buttonSpacing -- initial position, begin just slightly below top of screen.
     createColorCanvas()
 end
 
@@ -603,7 +608,7 @@ local function inColorCanvas() -- test if mouse/cursor is within the ColorCanvas
 end
 
 
-local function updateObjColor() -- update the color of the currently "selected" object, to the color sample the mouse is over. 
+local function updateObjColor() -- update the color of the currently "selected" object, to the color sample the mouse is over.
     local ccy = love.mouse.getY() - colorCanvas.yPos -- cursor y position on the colorCanvas
     local buttonNum = ccYtoB(ccy) -- get the ID (index) of the Button the cursor is over
     -- print(love.mouse.getY(), ccy, "button", buttonNum,
@@ -620,9 +625,9 @@ function love.update(dt)
 
     -- Update things like:
     -- scrolled position of the color picker
-    -- color updates due to mouse hover 
+    -- color updates due to mouse hover
 
-    if colorCanvas.active -- if the color picker is currently displayed... 
+    if colorCanvas.active -- if the color picker is currently displayed...
     then
         -- Up/Down Keys can scroll color picker
         if love.keyboard.isDown("down") then
@@ -684,7 +689,7 @@ function love.draw()
     if colorCanvas.active then
         love.graphics.draw(ColorsCanvas, colorCanvas.xPos, colorCanvas.yPos)
         --love.graphics.draw(ColorsCanvas, 400, colorCnvYpos, 0, 0.5, 0.5) -- draw scaled canvas to screen
-        --colorCanvas.yPos = colorCanvas.yPos + 1 -- auto drift 
+        --colorCanvas.yPos = colorCanvas.yPos + 1 -- auto drift
     end
 
     -- draw a little box to show where a click/touch happened
@@ -742,7 +747,7 @@ function love.mousereleased(x, y, button, istouch, presses)
             colorCanvas.active = false -- dismiss the color picker
             selectedObject = 0 -- de-select current colorable object (not necessary, but logically consistent)
         else
-            -- touchscreens update color on release, but don't close the color select canvas 
+            -- touchscreens update color on release, but don't close the color select canvas
             if selectedObject ~= 0 then -- if there is a 'selected' object to color...
                 updateObjColor()
             end
@@ -750,10 +755,10 @@ function love.mousereleased(x, y, button, istouch, presses)
     end
 
 
-    -- check if any Colorable Screen Objects got clicked: 
+    -- check if any Colorable Screen Objects got clicked:
     for i in ipairs(testObjList) do
-        local o = testObjList[i]  -- 'shortcut' to current Object 
-        if x > o.x and y > o.y and x < (o.x + o.width) and y < (o.y + o.height) then -- if "inside" the button... 
+        local o = testObjList[i] -- 'shortcut' to current Object
+        if x > o.x and y > o.y and x < (o.x + o.width) and y < (o.y + o.height) then -- if "inside" the button...
             selectedObject = i
 
             -- save the starting color before previewing new colors
@@ -775,5 +780,13 @@ end
 function love.keypressed(key)
     if key == "escape" then
         love.event.quit()
+    end
+    if key == "pagedown" then -- PageDown button...
+        -- scroll down 1 screen height (minus one button size)
+        colorCanvas.yPos = colorCanvas.yPos - (appCanvas.height - (buttonHeight + buttonSpacing))
+    end
+    if key == "pageup" then -- PageUp button...
+        -- scroll up 1 screen height (minus one button size)
+        colorCanvas.yPos = colorCanvas.yPos + (appCanvas.height - (buttonHeight + buttonSpacing))
     end
 end
