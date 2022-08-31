@@ -14,16 +14,11 @@ print("[" .. thisFile .. "] loaded/running.")
     so touchscreen clicks may be handled a bit differently. 
 
     TODO: 
-    - track previous color, if mouse isn't hovering over any color, restore to previous 
+    - fix Phone to revert to previous color if the touch was a "drag" 
+    (no.. actually the phone will still retain a "mouse position", so you 
+    can't stop it from applying the new color unless you stop phone from 
+    updating color in the .update() function)
 
-    - fix Phone to not select color on touch (select on a no-drag release) 
-
-    - get two screen objects to launch the color picker. 
-    - (when the picker is brought up, it should probably be in the same position it was left at)
-
-    - if you click or hover on a color, it updates, if you click on an empty part of the screen, it stops updating (and the picker goes away)
-
-    - if mouse "hovers" outside the color picker area, the object should probably return to its previous color 
 
     - OLD: 
     ? if you click (release?) without dragging (much) that triggers it? 
@@ -35,6 +30,8 @@ print("[" .. thisFile .. "] loaded/running.")
     [] Think about writing this WHOLE thing to be "modular" / a separate, reusable file. 
     and the specific buttons and colors are configured in a 3rd separate file. 
 ]]
+
+local touchscreen = false -- detect & set this during init
 
 local lastClick = { -- save x,y info of last initiation of a click or touch (for dragging operations)
     active = false,
@@ -85,7 +82,7 @@ local testObj2 = {
 }
 
 local testObjList = { testObj1, testObj2 } -- test objects (rectangles) to color on screen
-local selectedObject = 1 -- begin with region 1 already selected by default
+local selectedObject = 0
 
 
 -- draw the "Content" of the app
@@ -147,7 +144,7 @@ local colorList = {
 
 
 local colorCanvas = { -- size of the (usually hidden) color picker
-    active = true,
+    active = false,
     width = 200,
     height = 700,
     speed = 8,
@@ -223,6 +220,13 @@ end
 
 
 function love.load()
+    -- detect whether the device is using a touchscreen UI
+    if love.system.getOS() == "Android" then
+        touchscreen = true
+    else
+        touchscreen = false
+    end
+
     love.window.setMode(workScreen.width, workScreen.height,
         { resizable = workScreen.resizable, x = workScreen.xPos, y = workScreen.yPos })
     --love.window.setMode(appCanvas.width, appCanvas.height, { resizable = true })
@@ -248,6 +252,16 @@ local function inColorCanvas() -- test if mouse/cursor is Over the ColorCanvas
         isIn = true
     end
     return isIn
+end
+
+
+local function updateObjColor() -- update the color of the currently "selected" object
+    local ccy = love.mouse.getY() - colorCanvas.yPos -- cursor y position on the colorCanvas
+    local buttonNum = ccYtoB(ccy) -- get the ID of the Button ID the cursor is on
+    -- print(love.mouse.getY(), ccy, "button", buttonNum,
+    --     colorList[buttonNum][1], colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4])
+    local selObj = testObjList[selectedObject]
+    selObj.color = { colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4] }
 end
 
 
@@ -284,24 +298,34 @@ function love.update(dt)
 
             -- if mouse is IN the area of an 'active' colorCanvas...
             if inColorCanvas() then
-                -- update the color of the currently "selected" object
 
-                local ccy = love.mouse.getY() - colorCanvas.yPos -- cursor y position on the colorCanvas
-                local buttonNum = ccYtoB(ccy) -- get the ID of the Button ID the cursor is on
-                -- print(love.mouse.getY(), ccy, "button", buttonNum,
-                --     colorList[buttonNum][1], colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4])
-                local selObj = testObjList[selectedObject]
-                selObj.color = { colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4] }
+                -- Color update:
+                -- do Instant preview only for pointers that can "hover"
+                if touchscreen == false then
+                    --[[ we don't want to do "instant updates" for touchscreens because then it would select
+                        a color even on *drags*, and we can't "undo" on "release" because the touch seems 
+                        to retain a .getY() value, so it keeps applying the unintended color.
+                    --]]
+                    updateObjColor()
+                    -- -- update the color of the currently "selected" object
+                    -- local ccy = love.mouse.getY() - colorCanvas.yPos -- cursor y position on the colorCanvas
+                    -- local buttonNum = ccYtoB(ccy) -- get the ID of the Button ID the cursor is on
+                    -- -- print(love.mouse.getY(), ccy, "button", buttonNum,
+                    -- --     colorList[buttonNum][1], colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4])
+                    -- local selObj = testObjList[selectedObject]
+                    -- selObj.color = { colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4] }
+                end
 
 
+                -- Drag:
                 -- if a click/press is 'active' (held down) the colorCanvas can be "dragged"
                 if lastClick.active then
                     colorCanvas.yPos = colorCanvas.yStartDr + (love.mouse.getY() - lastClick.y)
                 end
+
             else -- mouse is outside the color selector, so revert  to the previous color
 
                 local selObj = testObjList[selectedObject]
-                --selObj.color = { 1, 1, 1 }
                 selObj.color = { selObj.color_previous[1], selObj.color_previous[2], selObj.color_previous[3] }
             end
         end
@@ -369,16 +393,36 @@ function love.mousereleased(x, y, button, istouch, presses)
     -- Releasing a *touch* (mobile screen) does nothing (keep the color picker visible)
     -- Clicking (& Releasing) on a color-able object, Selects that Object and Activates the color Picker
 
-    if not istouch then -- if it's a *mouse* click (not a touchscren)
-        if math.abs(y - lastClick.y) < 5 then -- and the mouse hasn't been 'drgged' significantly
-            -- if y == lastClick.y then
 
-            -- then something was 'mouseclicked' 
-            colorCanvas.active = false -- so dismiss the color picker
-            selectedObject = 0 -- de-select current color-able object (not required, but logically consistent)
+    -- if the mouse hasn't been 'drgged' significantly, then something was 'mouseclicked'
+    -- if y == lastClick.y
+    if math.abs(y - lastClick.y) < 5 then
+
+        if not istouch then -- if it's a *mouse* click (not a touchscren), consider a click to indicate a final selection:
+            -- (not needed... non touchscreens already update coloring in .update() )
+            -- if selectedObject ~= 0 then -- if there is a 'selected' object to color...
+            --     updateObjColor()
+            -- end
+            colorCanvas.active = false -- dismiss the color picker
+            selectedObject = 0 -- de-select current colorable object (not necessary, but logically consistent)
+        else
+            -- touchscreens update color on release, but don't end the selection process
+            if selectedObject ~= 0 then -- if there is a 'selected' object to color...
+                -- kmkmk
+                updateObjColor()
+            end
         end
-        -- (else, if something was "dragged", that's not a "select" operation, so do nothing.)
+
+        -- else -- if something was "dragged", that's not a "select" operation, so revert to the previous color
+
+        --     print("drag release...")
+        --     -- (for a *mouse* hovering over a color, this revert won't be noticable, but it matters for touchscreens)
+        --     if selectedObject ~= 0 then
+        --         local selObj = testObjList[selectedObject]
+        --         selObj.color = { selObj.color_previous[1], selObj.color_previous[2], selObj.color_previous[3] }
+        --     end
     end
+
 
     -- check if any Colorable Screen Objects got clicked:
     for i in ipairs(testObjList) do
@@ -386,12 +430,12 @@ function love.mousereleased(x, y, button, istouch, presses)
         if x > o.x and y > o.y and x < (o.x + o.width) and y < (o.y + o.height) then
             selectedObject = i
 
-            -- save the starting color before previewing new colors 
+            -- save the starting color before previewing new colors
             -- o.color_previous = o.color  -- No.. that would just be an alias.. right?
             o.color_previous = { o.color[1], o.color[2], o.color[3] }
 
             colorCanvas.active = true -- show the color picker
-            -- kmk, could put a ~break loop here... 
+            -- kmk, could put a ~break loop here...
         end
     end
 
