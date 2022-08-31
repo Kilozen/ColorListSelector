@@ -1,7 +1,7 @@
 local thisFile = "Canvas_tests.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
---[[
+--[[ -- 8/3/22 -- 
 TESTS for using a Canvas as a Scrolling select Menu
 - draw a tall, thin canvas, with text & color boxes 
 - translate it to make it scroll on the screen 
