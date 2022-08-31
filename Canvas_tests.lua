@@ -1,7 +1,7 @@
 local thisFile = "Canvas_tests.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
---[[ -- 8/4/22 -- 
+--[[ -- 8/5/22 -- 
     TESTS for using a Canvas as a Scrolling select Menu 
     - draw a tall, thin canvas, with text & color boxes 
     - translate it to make it scroll on the screen 
@@ -10,6 +10,9 @@ print("[" .. thisFile .. "] loaded/running.")
     and a small 'app' canvas, & the color canvass within it. 
 
     TODO: 
+    -- get TWO color regions to work. 
+    -- get two buttons to launch the color picker. 
+
     -- make buttons work 
     -- ? if you click (release?) without dragging (much) that triggers it? 
     (draw a white box on the canvas to ack. a click)
