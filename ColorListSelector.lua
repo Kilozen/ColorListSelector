@@ -1,13 +1,49 @@
-local thisFile = "Canvas_tests.lua"
+print(...)
+local thisFile = "ColorListSelector.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
 -- 8/26/22 -- 
---[[ __Name__.lua -- Simple Color Picker UI for Love2D 
-     These functions provide a pop-up, scrollable, list of colors which can be associated
+local Conf = require('ColorListConfig') -- get all the user 'Config' data for the colors & buttons
+-- Import all the User Config data from ColorListConfig (and create local  shortcut names  to use them)
+local buttonHeight = Conf.buttonHeight -- shortcut name
+local buttonSpacing = Conf.buttonSpacing
+local colorList = Conf.colorList
+local colorHexList = Conf.colorHexList
+local testObjList = Conf.ObjectList -- [] kmk ToDo rename testObjList to ~objectList
+
+
+local selectedObject = 0 -- integer: the Currently Selected (touched) object number from <-- Conf.ObjectList
+local touchscreen = false -- detect & set this during init
+
+
+local xx_workScreen = { -- approx size of the desktop being Developed on
+    width = 2000,
+    height = 1000,
+    xPos = 5,
+    yPos = 35,
+    resizable = true
+}
+
+local workScreen = { -- size of the target Hardware Platform Screen
+    width = 640 * 1,
+    height = 360 * 1,
+    xPos = nil,
+    yPos = nil,
+    resizable = false
+}
+
+--[[ ColorListSelector.lua -- Simple Color Picker UI module for Love2D 
+
+    THIS is the 'Library' file... hopefully people can often use it without any 
+    modification.  
+    The file ColorListConfig.lua is where the user can edit the color list, 
+    and any buttons needed to trigger it. 
+
+    These functions provide a pop-up, scrollable, list of colors which can be associated
      with objects on the screen (such as color-select buttons) to bring up the list, 
      then colors are touched to apply them. 
 
-     It is implemented for computer Mouse, and phone Touchscreen (android currently)
+    It is implemented for computer Mouse, and phone Touchscreen (android currently)
     
     How the code works: 
     There is an "app" canvas (where you put your things to be colored, and buttons
@@ -49,6 +85,17 @@ print("[" .. thisFile .. "] loaded/running.")
 
 --]]
 
+--[[ -- CHANGE LOG (read upward)
+
+
+8/25/22 - changing the name from "Canvas_tests.lua" to ColorListSelector.lua 
+and moving it to a separate project folder of its own.  Prior to this it 
+was just one of many 'test' files in 'love2d_per_Tests'. 
+
+So far this has not been version conrolled except backup saves, 
+like: Canvas_tests (12).lua 
+--]]
+
 --[[
     TESTS for using a Canvas as a Scrolling select Menu 
     - draw a tall, thin canvas, with text & color boxes 
@@ -62,17 +109,26 @@ print("[" .. thisFile .. "] loaded/running.")
     so touchscreen clicks may be handled a bit differently. 
 
     TODO: 
+    - modularize this & describe "how to use" it. 
+    - give it a proper name (not "Canvas test")
+    - ColorListSelector
+
+
+    - make a separate "Demo" test driver file to use this module remotely... 
+    - (then do the same in DragonPaint)
+
+
     - make a command to "Random Pick"? 
     - make PgUp/Dn arrows for touchscreen? 
     - (future: make a mini-list sidebar for faster scrolling?)
-
-    - modularize this & describe "how to use" it. 
 
     - limitation: ~288 colors works on desktop, but results in a canvass that is TOO BIG for android l2d.
     - (figure out what the limit is, and why.)
 
     - bug: scroll wheel & PgUp/Dn can move the window when it's invisible 
-    - draw a white box on buttons to ack. a selection? 
+    - put limits to scrolling far off screen. 
+
+    - ?draw a white box on buttons to ack. a selection? 
     - cosmetic improvements (rounded buttons?)
     - make fit more exact for any mobile screen (scale?)
 
@@ -83,270 +139,26 @@ print("[" .. thisFile .. "] loaded/running.")
 ]]
 
 -------------------------------------------------------------
---[[  Hex Color stuff -- (probably move to a separate file)
-    Todo: when doing this as a TEXT FILE, 
+--[[  Hex Color stuff -- 
+    Todo: maybe support using a simpler TEXT FILE rather than lua format config? 
     one line per line, or comma separators, but
     allow people to use quotes or not, we should parse it either way. 
     Also accept hex value preceeded by # or 0x or neither. 
+
+    If we do specify a simple text file format, it should Optimise for 
+    *simplicity* (minimze punctuation, because its easier to remove than to add) 
+    and maximize human readablity.  so e.g. it should just be 
+    name (single quotes are probably needed here though , values, carriage return
+    with spaces as separators. 
+    option to reverse order? 
 --]]
 
-local colorList = { -- DEFAULT "test" color list... it's ok for later code to overwrite this.
-    { "Test Colors", 1, 1, 1 },
-    { "Red", 1, 0, 0 },
-    { "Yellow", 1, 1, 0 },
-    { "Magenta", 1, 0, 1 },
-    { "Green", 0, 1, 0 },
-    { "Cyan", 0, 1, 1 },
-    { "Blue", 0, 0, 1 },
-    { "dRed", .6, 0, 0 },
-    { "dYellow", .6, .6, 0 },
-    { "dMagenta", .6, 0, .6 },
-    { "dGreen", 0, .6, 0 },
-    { "dCyan", 0, .6, .6 },
-    { "dBlue", 0, 0, .6 },
-}
-
-
--- 3 hex values. need to convert to 3 RGB
--- kmk: currently the canvas size of this list is too big for android to handle...
-local colorHexList = {
-    'FFFFFF', 'White',
-    'F7F9F9', 'Snowflake',
-    'EAEDEF', 'Whisp',
-    'D0CFD7', 'Whale',
-    'AFAFAF', 'Silver',
-    '888F8D', 'Gravel',
-    '9C8E8D', 'Felt',
-    '6A7185', 'Bluesteel',
-    '636268', 'Stone',
-    '5A6050', 'Tin',
-    '545365', 'Spirit',
-    '595451', 'Gloom',
-    '4C4C4C', 'Coal',
-    '4D484F', 'Gabbro',
-    '413C40', 'Asphalt',
-    '3B3736', 'Ash',
-    '332D25', 'Basalt',
-    '302722', 'Scoria',
-    '1A1A1B', 'Black',
-    '0E1011', 'Pitch',
-    '1F1A23', 'Night',
-    '22263D', 'Depth',
-    '471A43', 'Blackberry',
-    '4C2A4F', 'Berry',
-    '553348', 'Loulou',
-    '6E235D', 'Lilac',
-    '863290', 'Grape',
-    '9778BE', 'Petal',
-    '7F6195', 'Satin',
-    '5C415D', 'Haunted',
-    '735B77', 'Ghost',
-    '8E7F9E', 'Lavender',
-    'A794B2', 'Amethyst',
-    'AA96A6', 'Dart',
-    'E1CDFE', 'Pansy',
-    'CCA4E0', 'Bubble',
-    'DA4FFF', 'Plum',
-    '9C50D3', 'Purple',
-    '993BD1', 'Eggplant',
-    '7930B5', 'Midnight',
-    '5317B5', 'Urchin',
-    '4D2C89', 'Jelly',
-    '3F2B66', 'Smog',
-    '0D0A5B', 'Sapphire',
-    '2B0D88', 'Angler',
-    '2D237A', 'Bluebell',
-    '484AA1', 'Aster',
-    '525195', 'Smoke',
-    '4866D5', 'Uranus',
-    '757ADB', 'Rain',
-    '7895C1', 'Stream',
-    '444F69', 'Harpy',
-    '324BA9', 'Blue',
-    '212B5F', 'Denim',
-    '013485', 'Morpho',
-    '023AE2', 'Raindrop',
-    '1C51E7', 'Marine',
-    '2F83FF', 'Ocean',
-    '6394DD', 'Drip',
-    '76A8FF', 'Cool',
-    'AEC8FF', 'Sky',
-    '89A4C0', 'Cloud',
-    '556979', 'Aluminum',
-    '2F4557', 'Iron',
-    '263746', 'Dream',
-    '0D1E25', 'Abyss',
-    '0B2D46', 'Trench',
-    '0A3D67', 'Twilight',
-    '094869', 'Mountain',
-    '2B768F', 'Azure',
-    '0086CE', 'Shell',
-    '00B4D5', 'Cerulean',
-    'B3E1F1', 'Winter',
-    '91FFF7', 'Glow',
-    '00FFF1', 'Cyan',
-    '3CA2A4', 'Turquoise',
-    '3A8684', 'History',
-    '8DBCB4', 'Spruce',
-    '72C4C4', 'Water',
-    '9AEAEF', 'Glass',
-    'E2FFE6', 'Pistachio',
-    'B3FFD8', 'Dolphin',
-    '9AFFC7', 'Mint',
-    'B2E2BD', 'Seafoam',
-    'A6DBA7', 'Caterpillar',
-    '61AB89', 'Jade',
-    '148E67', 'Spearmint',
-    '1F565D', 'Essence',
-    '233253', 'Rainforest',
-    '153F4B', 'Seaweed',
-    '114D41', 'Algae',
-    '1F483A', 'Forest',
-    '005D48', 'Hydra',
-    '20603F', 'Emerald',
-    '236825', 'Shamrock',
-    '66903C', 'Pear',
-    '1E361A', 'Jungle',
-    '1E2716', 'Swamp',
-    '1F281D', 'Root',
-    '425035', 'Snake',
-    '51684C', 'Camo',
-    '516760', 'Scale',
-    '687F67', 'Ivy',
-    '97AF8B', 'Mantis',
-    'A7B08C', 'Micah',
-    '9BFF9D', 'Pea',
-    '03ff7d', 'Synthesizer',
-    '87E34D', 'Malachite',
-    '7ECE73', 'Fern',
-    '7BBD5D', 'Stem',
-    '629C3F', 'Green',
-    '567C34', 'Grass',
-    '8ECE56', 'Cactus',
-    'A5E32D', 'Leaf',
-    'C6FF00', 'Toxin',
-    'CDFE6C', 'Uranium',
-    '9FFF00', 'Corrosion',
-    'E8FCB4', 'Peridot',
-    'D1E572', 'Cabbage',
-    'B4CD3D', 'Chartreuse',
-    'A9A032', 'Prehistoric',
-    '828335', 'Alligator',
-    '697135', 'Olive',
-    '4B4420', 'Murk',
-    '7E7645', 'Bark',
-    'C18E1B', 'Amber',
-    'BEA55D', 'Sponge',
-    'D1B045', 'Haze',
-    'D1B300', 'Swallowtail',
-    'FFE63B', 'Lemon',
-    'F9E255', 'Wasp',
-    'F7FF6F', 'Yolk',
-    'FFEC80', 'Banana',
-    'FDD68B', 'Honey',
-    'FDE9AC', 'Squash',
-    'EDE8B0', 'Sanddollar',
-    'FFFDEA', 'Mellow',
-    'FDF1E1', 'Lychee',
-    'FFEFDC', 'Creme',
-    'F7DEBF', 'Pelt',
-    'FFD297', 'Ivory',
-    'F6BF6C', 'Peanut',
-    'F2AD0C', 'Gold',
-    'FFB53C', 'Marigold',
-    'FA912B', 'Apricot',
-    'FF8500', 'Poppy',
-    'FF984F', 'Yam',
-    'FFA147', 'Orange',
-    'FFB576', 'Peach',
-    'FCC4AD', 'Silt',
-    'F0B392', 'Sahara',
-    'D5602B', 'Saffron',
-    'B2560D', 'Bronze',
-    'B24407', 'Sandstone',
-    'FF5500', 'Carrot',
-    'EF5C23', 'Fire',
-    'FF6841', 'Pumpkin',
-    'FF7360', 'Sunrise',
-    'C15A39', 'Cinnamon',
-    'C47149', 'Caramel',
-    'B27749', 'Acorn',
-    '9A7B4F', 'Tortilla',
-    'C3996F', 'Hide',
-    'CABBA2', 'Beige',
-    '827A64', 'Pine',
-    '6D675B', 'Soil',
-    '564D48', 'Coffee',
-    '3C3030', 'Cocoa',
-    '766259', 'Chocolate',
-    '977B6C', 'Cappuccino',
-    'BFA18F', 'Beach',
-    '8A6059', 'Gingerbread',
-    '7A4D4D', 'Maple',
-    '774840', 'Hazel',
-    '6B3C34', 'Coconut',
-    '603E3D', 'Clay',
-    '57372C', 'Sable',
-    '432711', 'Penny',
-    '301E1A', 'Umber',
-    '22110A', 'Brownie',
-    '2F1B1B', 'Birch',
-    '5A4534', 'Feldspar',
-    '72573A', 'Walnut',
-    '855B33', 'Grain',
-    '91532A', 'Ginger',
-    '90553A', 'Starfish',
-    '8E5B3F', 'Brown',
-    '563012', 'Slate',
-    '7B3C1D', 'Auburn',
-    'A44B28', 'Copper',
-    '8B3220', 'Rust',
-    'BA311C', 'Tomato',
-    'E22D18', 'Vermillion',
-    'CE000D', 'Pepper',
-    'AA0024', 'Cherry',
-    '850012', 'Crimson',
-    '7A0E1E', 'Ruby',
-    '581014', 'Garnet',
-    '2D0102', 'Sanguine',
-    '451717', 'Blood',
-    '652127', 'Rose',
-    '8C272D', 'Cranberry',
-    'C1272D', 'Redwood',
-    'DF3236', 'Strawberry',
-    'fc6d68', 'Fruit',
-    'B13A3A', 'Carmine',
-    'A12928', 'Cerise',
-    '9A534D', 'Brick',
-    'CC6F6F', 'Coral',
-    'FEA0A0', 'Blush',
-    'FFE2E6', 'Macaron',
-    'FFB7B4', 'Sakura',
-    'FEA1B3', 'Flamingo',
-    'FFE5E5', 'Peony',
-    'FF839B', 'Ribbon',
-    'c67a80', 'Charm',
-    'EB799A', 'Candy',
-    'FB5E79', 'Bubblegum',
-    'DB518D', 'Watermelon',
-    'E934AA', 'Magenta',
-    'E7008B', 'Fuschia',
-    'cb0381', 'Tulip',
-    'aa004c', 'Rubellite',
-    '8A024A', 'Raspberry',
-    '4D0F28', 'Syrah',
-    '9C4975', 'Mauve',
-    'E77FBF', 'Gum',
-    'E5A9FF', 'Quartz',
-    'E8CCFF', 'Confetti',
-    'FFD6F6', 'Petalite',
-    'FBEDFA', 'Pearl',
-}
 
 -- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua  {kmk}
 local function Hex2Color(hex, value)
     --return {tonumber(string.sub(hex, 2, 3), 16)/256, tonumber(string.sub(hex, 4, 5), 16)/256, tonumber(string.sub(hex, 6, 7), 16)/256, value or 1}
-    return { tonumber(string.sub(hex, 1, 2), 16) / 256, tonumber(string.sub(hex, 3, 4), 16) / 256,
+    return { tonumber(string.sub(hex, 1, 2), 16) / 256,
+        tonumber(string.sub(hex, 3, 4), 16) / 256,
         tonumber(string.sub(hex, 5, 6), 16) / 256, value or 1 }
 end
 
@@ -364,20 +176,15 @@ local function convFlatPairsToColorList(flatTable)
         -- add new entry to end of the fixed format list
         fixedList[#fixedList + 1] = { flatTable[i + 1], rgb[1], rgb[2], rgb[3] }
         local tt = fixedList[#fixedList]
-        print('{' .. tt[1], tt[2], tt[3], tt[4] .. '}')
+        --print('{' .. tt[1], tt[2], tt[3], tt[4] .. '}')
     end
     return fixedList
 end
 
 
-print("TESTING HERE...\n")
---print(tmp[1])
---local colorList = convFlatPairsToColorList(colorHexList)  -- create the BIG color list. 
-
 
 -------------------------------------------------------------
 
-local touchscreen = false -- detect & set this during init
 
 local lastClick = { -- save x,y info of last initiation of a mouse click or touch (for dragging operations)
     active = false,
@@ -385,52 +192,12 @@ local lastClick = { -- save x,y info of last initiation of a mouse click or touc
     y = 0
 }
 
-local xx_workScreen = { -- approx size of the desktop being Developed on
-    width = 2000,
-    height = 1000,
-    xPos = 5,
-    yPos = 35,
-    resizable = true
-}
-
-local workScreen = { -- size of the target Hardware Platform Screen
-    width = 640 * 1,
-    height = 360 * 1,
-    xPos = nil,
-    yPos = nil,
-    resizable = false
-}
 
 -- kmk To Do:  figure out if appCanvas should be based on workScreen, or v/v...
-
 local appCanvas = { -- the "full screen" of the app (small smartphone size by default)
     width = 640 * 1,
     height = 360 * 1,
 }
-
-
-local testObj1 = { -- rectangle ~button wtih a text label
-    x = 50,
-    y = 100,
-    width = 300,
-    height = 100,
-    color = { .6, .4, .4 }, -- default starting color
-    color_previous = { .6, .4, .4 },
-    text = "Primary" -- text label on the button
-}
-
-local testObj2 = {
-    x = 50,
-    y = 220,
-    width = 300,
-    height = 100,
-    color = { .4, .4, .6 }, -- default starting color
-    color_previous = { .4, .4, .6 },
-    text = "Secondary"
-}
-
-local testObjList = { testObj1, testObj2 } -- test objects (rectangles) to color on screen
-local selectedObject = 0 -- the Currently Selected (touched) object
 
 
 -- draw the "Content" of the app
@@ -460,7 +227,9 @@ local function drawAppCanvas()
     love.graphics.setColor(1, 1, 1)
     love.graphics.setCanvas(AppCanvas) -- draw to the other canvas...
     --love.graphics.setBackgroundColor(0.2, 0.2, 0) -- bg color of the color window  -- this doesn't see to work right on Canvas..?
-    love.graphics.clear(0, 0, 0.2)
+    --love.graphics.clear(0, 0, 0.2)
+    --love.graphics.clear(0, 0, 0) -- opaque
+    love.graphics.clear() -- transparent
     drawAppWindow()
     love.graphics.setCanvas() -- re-enable drawing to the main screen
     love.graphics.setColor(1, 1, 1)
@@ -474,26 +243,6 @@ local function createAppCanvas()
     drawAppCanvas()
 end
 
-
-local OLDcolorList = {
-    { "Red", 1, 0, 0 },
-    { "Yellow", 1, 1, 0 },
-    { "Magenta", 1, 0, 1 },
-    { "Green", 0, 1, 0 },
-    { "Cyan", 0, 1, 1 },
-    { "Blue", 0, 0, 1 },
-
-    { "Red", .6, 0, 0 },
-    { "Yellow", .6, .6, 0 },
-    { "Magenta", .6, 0, .6 },
-    { "Green", 0, .6, 0 },
-    { "Cyan", 0, .6, .6 },
-    { "Blue", 0, 0, .6 },
-}
-
-
-local buttonHeight = 30 -- default 30
-local buttonSpacing = 6 -- default 6
 
 local colorCanvas = { -- size of the (usually hidden) color picker
     active = false,
@@ -528,7 +277,7 @@ local function ccYtoB(y) -- colorCanvas Y coord --> Button #
 end
 
 
--- draw the CONTENT of the color show/select canvas
+-- draw the CONTENT of the color show/select canvas (this only runs once)
 local function drawColorWindow()
     local mode = "fill"
     local x = 0
@@ -549,6 +298,11 @@ local function drawColorWindow()
         love.graphics.rectangle(mode, x, y, buttonWidth, buttonHeight, rx, ry, segments)
 
         love.graphics.setColor(0, 0, 0) -- black text
+        -- RGB colors can add up to 3... if they add to <1.5, they're dark, so use whiteish text
+        local darkThreshold = 0.7 -- tried values of: 0.7,  1.29,  1.5...
+        if (colorList[i][2] + colorList[i][3] + colorList[i][4]) < darkThreshold then
+            love.graphics.setColor(.7, .7, .7) -- white(ish) text
+        end
         love.graphics.print(colorList[i][1], x + 2, y)
     end
 end
@@ -567,13 +321,14 @@ local function createColorCanvas()
     love.graphics.setCanvas(ColorsCanvas) -- draw to the other canvas...
     --love.graphics.setBackgroundColor(0.2, 0.2, 0) -- bg color of the color window  -- this doesn't seem to work right on Canvas..?
     -- love.graphics.clear(0, 0.2, 0)  -- color the sub-canvas to make its boundaries visible for dev.
-    love.graphics.clear(0, 0, 0)
+    -- love.graphics.clear(0, 0, 0) -- opaque
+    love.graphics.clear() -- transparent
     drawColorWindow()
     love.graphics.setCanvas() -- re-enable drawing to the main screen
 end
 
 
-function love.load()
+local function load()
     -- detect whether the device is using a touchscreen UI
     if love.system.getOS() == "Android" then
         touchscreen = true
@@ -584,9 +339,15 @@ function love.load()
     love.window.setMode(workScreen.width, workScreen.height,
         { resizable = workScreen.resizable, x = workScreen.xPos, y = workScreen.yPos })
 
-    love.graphics.setBackgroundColor(0.2, 0, 0.2) -- bg color of the main window
+    --love.graphics.setBackgroundColor(0.2, 0, 0.2) -- bg color of the main window
+    -- meh.. should not do this in a 'Module', becuase it has global impact. 
 
-    love.graphics.setFont(love.graphics.newFont(40))
+
+    print("TESTING HERE...\n")
+    -- create the BIG color list from the Hex list... 
+    colorList = convFlatPairsToColorList(colorHexList)
+
+
 
     -- (manually painting the "app canvas" into the main window gives flexibility to show all 'windows' during development)
     createAppCanvas()
@@ -618,7 +379,7 @@ local function updateObjColor() -- update the color of the currently "selected" 
 end
 
 
-function love.update(dt)
+local function update(dt)
     -- In other callbacks, updates happen from events like Clicks.
     -- Here, we handle mouse "hover" updates, and
     -- keys or touches that are "held" down (e.g. dragging)
@@ -679,7 +440,7 @@ function love.update(dt)
 end
 
 
-function love.draw()
+local function draw()
     --drawColorWindow() -- dev test: test-draw direct to screen
 
     drawAppCanvas() -- update the main app window, in the background, then draw it:
@@ -700,7 +461,7 @@ function love.draw()
 end
 
 
-function love.mousepressed(x, y, button, istouch, presses) -- keep both mouse & touchscreeen in mind here!
+local function mousepressed(x, y, button, istouch, presses) -- keep both mouse & touchscreeen in mind here!
 
     -- Clicking (anywhere) enables possible dragging operations
     -- Clicking *away* from active areas, dismisses the color picker (and de-selects any objects)
@@ -728,7 +489,7 @@ function love.mousepressed(x, y, button, istouch, presses) -- keep both mouse & 
 end
 
 
-function love.mousereleased(x, y, button, istouch, presses)
+local function mousereleased(x, y, button, istouch, presses)
     print("mouse at " .. x, y)
 
     lastClick.active = false -- touch is no longer down... no 'drag' is active.
@@ -743,9 +504,15 @@ function love.mousereleased(x, y, button, istouch, presses)
     -- if y == lastClick.y
     if math.abs(y - lastClick.y) < 5 then
 
+        -- print the current object color to the console
+        if selectedObject ~= 0 then
+            local c = testObjList[selectedObject].color
+            print("color = ", c[1], c[2], c[3])
+        end
+
         if not istouch then -- if it's a *mouse* click (not a touchscren), consider a click to indicate a final selection:
             colorCanvas.active = false -- dismiss the color picker
-            selectedObject = 0 -- de-select current colorable object (not necessary, but logically consistent)
+            selectedObject = 0 -- de-select current colorable object (not necessary, but for clarity)
         else
             -- touchscreens update color on release, but don't close the color select canvas
             if selectedObject ~= 0 then -- if there is a 'selected' object to color...
@@ -772,15 +539,12 @@ function love.mousereleased(x, y, button, istouch, presses)
 end
 
 
-function love.wheelmoved(x, y)
+local function wheelmoved(x, y)
     colorCanvas.yPos = colorCanvas.yPos + (y * 20) -- speed & direction probably need to be configurable...
 end
 
 
-function love.keypressed(key)
-    if key == "escape" then
-        love.event.quit()
-    end
+local function keypressed(key)
     if key == "pagedown" then -- PageDown button...
         -- scroll down 1 screen height (minus one button size)
         colorCanvas.yPos = colorCanvas.yPos - (appCanvas.height - (buttonHeight + buttonSpacing))
@@ -790,3 +554,16 @@ function love.keypressed(key)
         colorCanvas.yPos = colorCanvas.yPos + (appCanvas.height - (buttonHeight + buttonSpacing))
     end
 end
+
+
+-- Return the Module functions which can be called from the outside:
+return {
+    keypressed = keypressed,
+    load = load,
+    update = update,
+    draw = draw,
+    wheelmoved = wheelmoved,
+    mousepressed = mousepressed,
+    mousereleased = mousereleased,
+}
+
