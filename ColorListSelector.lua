@@ -2,12 +2,34 @@ print(...)
 local thisFile = "ColorListSelector.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
--- 8/28/22 --
+--[[ 
+    TO USE this module, the user application should call two require()s, something like this: 
+        require "ColorListConfig" 
+        local CLS = require "ColorListSelector" 
+    The reason we don't have ColorListSelector just require() ColorListConfig itself 
+    is so the user can put the files whereever they want and then specify the paths. 
+--]]
 
-local Conf             = require('ColorListConfig') -- get all the user 'Config' data for the colors & buttons
--- Import all the User Config data from ColorListConfig 
--- (It looks a bit odd to be giving 'shortcut' names that aren't much shorter, but 
---  these were the local names I was already using before I moved them outside of this file...) 
+---------------------------------------------------------------------------------------
+-- Config Data Import preliminaries --
+---------------------------------------------------------------------------------------
+--[[ 
+    Yuck... kmkmk TODO:  figure out how to allow the user to put libraries & config
+    where ever they want, and pass either the Config Data, or the Path, to ColorListSelector.lua 
+
+    In later versions of Lua, it could be done by passing a ~path parameter in 
+    the require() call... but I don't think Lua 5.1 supports that.  So for the 
+    time being, I'm requiring use of a GLOBAL var named 'CLSconfig' for the user 
+    to pass config data to CLS. 
+--]]
+
+--local Conf             = require('ColorListConfig') -- get all the user 'Config' data for the colors & buttons
+--local Conf             = require "lib.ColorListSelector.ColorListConfig" -- get all the user 'Config' data for the colors & buttons
+local Conf = CLSconfig
+
+-- Import all the User Config data from ColorListConfig
+-- (It looks a bit odd to be giving 'shortcut' names that aren't much shorter, but
+--  these were the local names I was already using before I moved them outside of this file...)
 local UIcanvasData     = Conf.UIcanvasData
 local colorsCanvasData = Conf.colorsCanvasData
 local buttonHeight     = Conf.buttonHeight
@@ -17,12 +39,15 @@ local colorHexList     = Conf.colorHexList
 local buttonList       = Conf.buttonList
 
 
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+
 local selectedButton = 0 -- integer: the Currently Selected (touched) button number from <-- Conf.buttonList
 local touchscreen = false -- detect & set this during init
 
 
 local UIcanvas = {} -- pre-declare the canvas object to be Local.
-local colorsCanvas = {} -- pre-declare the canvas object to be Local. 
+local colorsCanvas = {} -- pre-declare the canvas object to be Local.
 
 
 --[[ ColorListSelector.lua -- Simple Color Picker UI module for Love2D 
@@ -542,6 +567,6 @@ return {
     draw = draw,
     wheelmoved = wheelmoved,
     mousepressed = mousepressed,
-    mousereleased = mousereleased,  -- callback function 
-    buttonList = buttonList,        -- data structure 
+    mousereleased = mousereleased, -- callback function
+    buttonList = buttonList, -- data structure
 }
