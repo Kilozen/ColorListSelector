@@ -2,7 +2,7 @@ print(...)
 local thisFile = "ColorListSelector.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
--- 8/26/22 -- 
+-- 8/26/22 --
 local Conf = require('ColorListConfig') -- get all the user 'Config' data for the colors & buttons
 -- Import all the User Config data from ColorListConfig (and create local  shortcut names  to use them)
 local buttonHeight = Conf.buttonHeight -- shortcut name
@@ -12,25 +12,34 @@ local colorHexList = Conf.colorHexList
 local testObjList = Conf.ObjectList -- [] kmk ToDo rename testObjList to ~objectList
 
 
-local selectedObject = 0 -- integer: the Currently Selected (touched) object number from <-- Conf.ObjectList
+local selectedObject = 0 -- integer: the Currently Selected (touched) object number from <-- Conf.ObjectList 
 local touchscreen = false -- detect & set this during init
 
 
-local xx_workScreen = { -- approx size of the desktop being Developed on
-    width = 2000,
-    height = 1000,
-    xPos = 5,
-    yPos = 35,
-    resizable = true
+local appCanvas = {
+    --[[
+        The "full screen" of the app (small smartphone size by default) 
+        Everything specified in ColorListConfig.lua is drawn on THIS canvas. 
+        Normally, you'll probably just want to make this canvas the same dimensions 
+        that your overall "app" window is.  It will be drawn on top of your app 
+        (but its background is transparent, so your other content shows through.)
+    ]]
+    width = 640 * 1,
+    height = 360 * 1
 }
 
-local workScreen = { -- size of the target Hardware Platform Screen
-    width = 640 * 1,
-    height = 360 * 1,
-    xPos = nil,
-    yPos = nil,
-    resizable = false
+
+local colorCanvas = { -- size of the (usually hidden) color picker
+    active = false,
+    width = 200,
+    height = 500, -- this is just an initial value, it's actually calculated in createColorCanvas()
+    speed = 8, -- scroll speed for things like arrow keys
+    xPos = 400, -- x position on the app screen
+    yPos = 0, -- the y coordinate will change when user scrolls the window
+    yStartDr = 0, -- the y position of the canvas at the start of a Drag
 }
+
+
 
 --[[ ColorListSelector.lua -- Simple Color Picker UI module for Love2D 
 
@@ -86,14 +95,13 @@ local workScreen = { -- size of the target Hardware Platform Screen
 --]]
 
 --[[ -- CHANGE LOG (read upward)
-
+8/26/22 - moved a bunch of pure-data / config stuff out of here and into ColorListConfig.lua 
 
 8/25/22 - changing the name from "Canvas_tests.lua" to ColorListSelector.lua 
 and moving it to a separate project folder of its own.  Prior to this it 
 was just one of many 'test' files in 'love2d_per_Tests'. 
 
-So far this has not been version conrolled except backup saves, 
-like: Canvas_tests (12).lua 
+So far this has not been version conrolled except for a lot of backup saves, like: Canvas_tests (12).lua 
 --]]
 
 --[[
@@ -182,7 +190,6 @@ local function convFlatPairsToColorList(flatTable)
 end
 
 
-
 -------------------------------------------------------------
 
 
@@ -193,15 +200,8 @@ local lastClick = { -- save x,y info of last initiation of a mouse click or touc
 }
 
 
--- kmk To Do:  figure out if appCanvas should be based on workScreen, or v/v...
-local appCanvas = { -- the "full screen" of the app (small smartphone size by default)
-    width = 640 * 1,
-    height = 360 * 1,
-}
 
-
--- draw the "Content" of the app
-local function drawAppWindow()
+local function drawAppContent()
     -- just draw any old thing on the screen as a placeholder.  a few rectangles...
     for i in ipairs(testObjList) do
         local x = testObjList[i].x
@@ -223,36 +223,24 @@ local function drawAppWindow()
 end
 
 
-local function drawAppCanvas()
+local function drawAppCanvas() -- called repeatedly
     love.graphics.setColor(1, 1, 1)
     love.graphics.setCanvas(AppCanvas) -- draw to the other canvas...
-    --love.graphics.setBackgroundColor(0.2, 0.2, 0) -- bg color of the color window  -- this doesn't see to work right on Canvas..?
-    --love.graphics.clear(0, 0, 0.2)
-    --love.graphics.clear(0, 0, 0) -- opaque
-    love.graphics.clear() -- transparent
-    drawAppWindow()
+    --love.graphics.clear(0, 0, 0) -- opaque black
+    love.graphics.clear() -- transparent black
+    love.graphics.clear(0, 0, 1, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
+    drawAppContent()
     love.graphics.setCanvas() -- re-enable drawing to the main screen
     love.graphics.setColor(1, 1, 1)
 end
 
 
--- create the  Canvas that represents the entire App (within the development 'desktop' canvas)
-local function createAppCanvas()
+local function createAppCanvas() -- called once
+    -- create the  Canvas that represents the entire App (within the development 'desktop' canvas)
 
     AppCanvas = love.graphics.newCanvas(appCanvas.width, appCanvas.height)
     drawAppCanvas()
 end
-
-
-local colorCanvas = { -- size of the (usually hidden) color picker
-    active = false,
-    width = 200,
-    height = 500, -- this is just an initial value, it's actually calculated in createColorCanvas()
-    speed = 8, -- scroll speed for things like arrow keys
-    xPos = 400, -- x position on the app screen
-    yPos = 0, -- the y coordinate will change when user scrolls the window
-    yStartDr = 0, -- the y position of the canvas at the start of a Drag
-}
 
 
 local function ccBtoY(button) -- colorCanvas Button # --> Y coord
@@ -277,8 +265,8 @@ local function ccYtoB(y) -- colorCanvas Y coord --> Button #
 end
 
 
--- draw the CONTENT of the color show/select canvas (this only runs once)
-local function drawColorWindow()
+-- draw the CONTENT of the color show/select canvas (this is only done once)
+local function drawColorCanvas()
     local mode = "fill"
     local x = 0
     local y = 0
@@ -308,10 +296,10 @@ local function drawColorWindow()
 end
 
 
--- create the movable Canvas to put the color list on
--- this is a *static* canvas, drawn once at startup:
--- just create the canvas object, and draw it (once) in the background.
 local function createColorCanvas()
+    -- Create the movable Canvas to put the color list on.
+    -- just create the canvas object, and draw it (once) in the background.
+    -- this is a *static* canvas, drawn once at startup.
 
     local y = ccBtoY(#colorList + 1) -- get Y coordinate of the LAST color button
 
@@ -319,16 +307,16 @@ local function createColorCanvas()
     ColorsCanvas = love.graphics.newCanvas(colorCanvas.width, colorCanvas.height)
 
     love.graphics.setCanvas(ColorsCanvas) -- draw to the other canvas...
-    --love.graphics.setBackgroundColor(0.2, 0.2, 0) -- bg color of the color window  -- this doesn't seem to work right on Canvas..?
-    -- love.graphics.clear(0, 0.2, 0)  -- color the sub-canvas to make its boundaries visible for dev.
-    -- love.graphics.clear(0, 0, 0) -- opaque
-    love.graphics.clear() -- transparent
-    drawColorWindow()
+    -- love.graphics.clear(0, 0, 0) -- opaque black
+    love.graphics.clear() -- transparent black
+    love.graphics.clear(0, 1, 0, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
+    drawColorCanvas()
     love.graphics.setCanvas() -- re-enable drawing to the main screen
 end
 
 
-local function load()
+local function load() -- initialization stuff: this should be called from the main program's love.load()
+
     -- detect whether the device is using a touchscreen UI
     if love.system.getOS() == "Android" then
         touchscreen = true
@@ -336,15 +324,8 @@ local function load()
         touchscreen = false
     end
 
-    love.window.setMode(workScreen.width, workScreen.height,
-        { resizable = workScreen.resizable, x = workScreen.xPos, y = workScreen.yPos })
 
-    --love.graphics.setBackgroundColor(0.2, 0, 0.2) -- bg color of the main window
-    -- meh.. should not do this in a 'Module', becuase it has global impact. 
-
-
-    print("TESTING HERE...\n")
-    -- create the BIG color list from the Hex list... 
+    -- convert a Hex-color list format to our expected color list format... 
     colorList = convFlatPairsToColorList(colorHexList)
 
 
@@ -379,15 +360,16 @@ local function updateObjColor() -- update the color of the currently "selected" 
 end
 
 
-local function update(dt)
-    -- In other callbacks, updates happen from events like Clicks.
-    -- Here, we handle mouse "hover" updates, and
-    -- keys or touches that are "held" down (e.g. dragging)
+local function update(dt) -- this is the whatever functionality needs to happen during "love.update()"
+    --[[
+        In other callbacks, updates happen from events like Clicks.
+        Here, we handle mouse "hover" updates, and
+        keys or touches that are "held" down (e.g. dragging)
 
-    -- Update things like:
-    -- scrolled position of the color picker
-    -- color updates due to mouse hover
-
+        Update things like:
+        scrolled position of the color picker
+        color updates due to mouse hover
+    --]]
     if colorCanvas.active -- if the color picker is currently displayed...
     then
         -- Up/Down Keys can scroll color picker
@@ -440,8 +422,8 @@ local function update(dt)
 end
 
 
-local function draw()
-    --drawColorWindow() -- dev test: test-draw direct to screen
+local function draw() -- this is the whatever functionality needs to happen during "love.draw()"
+    --drawColorCanvas() -- dev test: test-draw direct to screen
 
     drawAppCanvas() -- update the main app window, in the background, then draw it:
     love.graphics.draw(AppCanvas, 0, 0)
@@ -566,4 +548,3 @@ return {
     mousepressed = mousepressed,
     mousereleased = mousereleased,
 }
-

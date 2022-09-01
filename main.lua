@@ -12,16 +12,43 @@
 --]]
 
 
+local appWindow_mobile = {
+    --[[
+        These are the dimensions, etc. of the Love2D app window to create. 
+        For a small device, it is likely to be the Full Screen size of the
+        device.  On a desktop, it might be full screen, or a smaller window. 
+    --]]
+    width = 640 * 1,
+    height = 360 * 1,
+    xPos = nil,
+    yPos = nil,
+    resizable = false
+}
+
+local appWindow_larger = {
+    width = 2000,
+    height = 1000,
+    --xPos = 5,
+    --yPos = 35,
+    resizable = true
+}
+
+local appWindow = appWindow_larger -- assign whichever appWindow size to currently develop with
+
+
 local CLS = require('ColorListSelector')
 
 
 function love.load()
+    -- create the Love2D main app window 
+    love.window.setMode(appWindow.width, appWindow.height,
+        { resizable = appWindow.resizable, x = appWindow.xPos, y = appWindow.yPos })
+
     local gameFont = love.graphics.newFont(40)
     love.graphics.setFont(gameFont)
     --love.graphics.setBackgroundColor(0.2, 0, 0.2) -- bg color of the main window
 
-
-    CLS.load()
+    CLS.load() -- let ColorListSelector do its initialization 
 end
 
 
@@ -74,4 +101,3 @@ function love.mousereleased(x, y, button, istouch, presses)
 
     CLS.mousereleased(x, y)
 end
-
