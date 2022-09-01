@@ -12,6 +12,10 @@
 --]]
 
 
+require "strict"
+local CLS = require('ColorListSelector')
+
+
 local appWindow_mobile = {
     --[[
         These are the dimensions, etc. of the Love2D app window to create. 
@@ -33,10 +37,8 @@ local appWindow_larger = {
     resizable = true
 }
 
-local appWindow = appWindow_larger -- assign whichever appWindow size to currently develop with
+local appWindow = appWindow_mobile -- assign whichever appWindow size to currently develop with
 
-
-local CLS = require('ColorListSelector')
 
 
 function love.load()

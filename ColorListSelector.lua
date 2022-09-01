@@ -2,7 +2,7 @@ print(...)
 local thisFile = "ColorListSelector.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
--- 8/26/22 --
+-- 8/26/22 -- 
 local Conf = require('ColorListConfig') -- get all the user 'Config' data for the colors & buttons
 -- Import all the User Config data from ColorListConfig (and create local  shortcut names  to use them)
 local buttonHeight = Conf.buttonHeight -- shortcut name
@@ -16,7 +16,7 @@ local selectedObject = 0 -- integer: the Currently Selected (touched) object num
 local touchscreen = false -- detect & set this during init
 
 
-local appCanvas = {
+local UIcanvasData = {
     --[[
         The "full screen" of the app (small smartphone size by default) 
         Everything specified in ColorListConfig.lua is drawn on THIS canvas. 
@@ -27,18 +27,19 @@ local appCanvas = {
     width = 640 * 1,
     height = 360 * 1
 }
+local UIcanvas = {} -- pre-declare the canvas object to be Local. 
 
 
-local colorCanvas = { -- size of the (usually hidden) color picker
+local colorsCanvasData = { -- size of the (usually hidden) color picker
     active = false,
     width = 200,
-    height = 500, -- this is just an initial value, it's actually calculated in createColorCanvas()
+    height = 500, -- this is just an initial value, it's actually calculated in createColorsCanvas()
     speed = 8, -- scroll speed for things like arrow keys
     xPos = 400, -- x position on the app screen
     yPos = 0, -- the y coordinate will change when user scrolls the window
     yStartDr = 0, -- the y position of the canvas at the start of a Drag
 }
-
+local colorsCanvas = {} -- pre-declare the canvas object to be Local. 
 
 
 --[[ ColorListSelector.lua -- Simple Color Picker UI module for Love2D 
@@ -58,16 +59,16 @@ local colorCanvas = { -- size of the (usually hidden) color picker
     There is an "app" canvas (where you put your things to be colored, and buttons
     to trigger the color menu/selector.)
     And a "color" selector canvas (tall and narrow, scrollable) 
-    The ColorsCanvas is scrolled simply by drawing it at different y coordinates
+    The colorsCanvas is scrolled simply by drawing it at different y coordinates
     (most of that tall canvas will be off the top or bottom of the screen.)
 
     love.draw() -- is pretty simple: 
-    it draws the user's app objects to the AppCanvas, then draws the AppCanvas
+    it draws the user's app objects to the UIcanvas, then draws the UIcanvas
     to the Love2D app window. 
-    and *if* the ColorsCanvas is "active", then it also draws the ColorsCanvas 
+    and *if* the colorsCanvas is "active", then it also draws the colorsCanvas 
     over the Love2D app window, at its current scrolled y coordinate. 
 
-    The position (y-axis scrolling) of the ColorsCanvas (i.e. colorCanvas.yPos)
+    The position (y-axis scrolling) of the colorsCanvas (i.e. colorsCanvasData.yPos)
     is updated by the callback love.wheelmoved(x, y)
 
     love.update() 
@@ -96,6 +97,7 @@ local colorCanvas = { -- size of the (usually hidden) color picker
 
 --[[ -- CHANGE LOG (read upward)
 8/26/22 - moved a bunch of pure-data / config stuff out of here and into ColorListConfig.lua 
+cleaned up the Naming of things. 
 
 8/25/22 - changing the name from "Canvas_tests.lua" to ColorListSelector.lua 
 and moving it to a separate project folder of its own.  Prior to this it 
@@ -223,9 +225,9 @@ local function drawAppContent()
 end
 
 
-local function drawAppCanvas() -- called repeatedly
+local function drawUIcanvas() -- called repeatedly
     love.graphics.setColor(1, 1, 1)
-    love.graphics.setCanvas(AppCanvas) -- draw to the other canvas...
+    love.graphics.setCanvas(UIcanvas) -- draw to the other canvas...
     --love.graphics.clear(0, 0, 0) -- opaque black
     love.graphics.clear() -- transparent black
     love.graphics.clear(0, 0, 1, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
@@ -235,22 +237,22 @@ local function drawAppCanvas() -- called repeatedly
 end
 
 
-local function createAppCanvas() -- called once
+local function createUIcanvas() -- called once
     -- create the  Canvas that represents the entire App (within the development 'desktop' canvas)
 
-    AppCanvas = love.graphics.newCanvas(appCanvas.width, appCanvas.height)
-    drawAppCanvas()
+    UIcanvas = love.graphics.newCanvas(UIcanvasData.width, UIcanvasData.height)
+    drawUIcanvas()
 end
 
 
-local function ccBtoY(button) -- colorCanvas Button # --> Y coord
+local function ccBtoY(button) -- colorsCanvas Button # --> Y coord
     -- basically: button number * height ... with a few tweaks.
     local y = (button - 1) * (buttonHeight + buttonSpacing)
     return y
 end
 
 
-local function ccYtoB(y) -- colorCanvas Y coord --> Button #
+local function ccYtoB(y) -- colorsCanvas Y coord --> Button #
     -- this calculation regards the spacing under the button as part of the button,
     -- so shifting y at least centers it better:
     y = y + (buttonSpacing / 2)
@@ -266,11 +268,11 @@ end
 
 
 -- draw the CONTENT of the color show/select canvas (this is only done once)
-local function drawColorCanvas()
+local function drawColorsCanvas()
     local mode = "fill"
     local x = 0
     local y = 0
-    local buttonWidth = colorCanvas.width
+    local buttonWidth = colorsCanvasData.width
     --local recHeight = 40
     local rx = nil -- 10 -- (if you want rounded corners)
     local ry = nil
@@ -296,21 +298,21 @@ local function drawColorCanvas()
 end
 
 
-local function createColorCanvas()
+local function createColorsCanvas()
     -- Create the movable Canvas to put the color list on.
     -- just create the canvas object, and draw it (once) in the background.
     -- this is a *static* canvas, drawn once at startup.
 
     local y = ccBtoY(#colorList + 1) -- get Y coordinate of the LAST color button
 
-    colorCanvas.height = y -- todo: calculate this from color list size
-    ColorsCanvas = love.graphics.newCanvas(colorCanvas.width, colorCanvas.height)
+    colorsCanvasData.height = y -- todo: calculate this from color list size
+    colorsCanvas = love.graphics.newCanvas(colorsCanvasData.width, colorsCanvasData.height)
 
-    love.graphics.setCanvas(ColorsCanvas) -- draw to the other canvas...
+    love.graphics.setCanvas(colorsCanvas) -- draw to the other canvas...
     -- love.graphics.clear(0, 0, 0) -- opaque black
     love.graphics.clear() -- transparent black
     love.graphics.clear(0, 1, 0, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
-    drawColorCanvas()
+    drawColorsCanvas()
     love.graphics.setCanvas() -- re-enable drawing to the main screen
 end
 
@@ -331,18 +333,18 @@ local function load() -- initialization stuff: this should be called from the ma
 
 
     -- (manually painting the "app canvas" into the main window gives flexibility to show all 'windows' during development)
-    createAppCanvas()
+    createUIcanvas()
 
-    colorCanvas.yPos = buttonSpacing -- initial position, begin just slightly below top of screen.
-    createColorCanvas()
+    colorsCanvasData.yPos = buttonSpacing -- initial position, begin just slightly below top of screen.
+    createColorsCanvas()
 end
 
 
-local function inColorCanvas() -- test if mouse/cursor is within the ColorCanvas
+local function inColorsCanvas() -- test if mouse/cursor is within the ColorsCanvas
     local isIn = false
 
-    if (love.mouse.getX() > colorCanvas.xPos) and
-        (love.mouse.getX() < colorCanvas.xPos + colorCanvas.width) -- (maybe add check of Y coordinate too?)
+    if (love.mouse.getX() > colorsCanvasData.xPos) and
+        (love.mouse.getX() < colorsCanvasData.xPos + colorsCanvasData.width) -- (maybe add check of Y coordinate too?)
     then
         isIn = true
     end
@@ -351,7 +353,7 @@ end
 
 
 local function updateObjColor() -- update the color of the currently "selected" object, to the color sample the mouse is over.
-    local ccy = love.mouse.getY() - colorCanvas.yPos -- cursor y position on the colorCanvas
+    local ccy = love.mouse.getY() - colorsCanvasData.yPos -- cursor y position on the ColorsCanvas
     local buttonNum = ccYtoB(ccy) -- get the ID (index) of the Button the cursor is over
     -- print(love.mouse.getY(), ccy, "button", buttonNum,
     --     colorList[buttonNum][1], colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4])
@@ -370,29 +372,29 @@ local function update(dt) -- this is the whatever functionality needs to happen 
         scrolled position of the color picker
         color updates due to mouse hover
     --]]
-    if colorCanvas.active -- if the color picker is currently displayed...
+    if colorsCanvasData.active -- if the color picker is currently displayed...
     then
         -- Up/Down Keys can scroll color picker
         if love.keyboard.isDown("down") then
-            colorCanvas.yPos = colorCanvas.yPos - colorCanvas.speed
+            colorsCanvasData.yPos = colorsCanvasData.yPos - colorsCanvasData.speed
         elseif love.keyboard.isDown("up") then
-            colorCanvas.yPos = colorCanvas.yPos + colorCanvas.speed
+            colorsCanvasData.yPos = colorsCanvasData.yPos + colorsCanvasData.speed
         end
 
         -- -- (This code was used before touchscreen dragging was implemeted)
         -- -- This 'if' causes screen to scroll *steadily* up if you touch the upper part of the screen:
         -- if lastClick.active then
         --     if lastClick.y < 200 then
-        --         colorCanvas.yPos = colorCanvas.yPos - colorCanvas.speed
+        --         colorsCanvasData.yPos = colorsCanvasData.yPos - colorsCanvasData.speed
         --     else
-        --         colorCanvas.yPos = colorCanvas.yPos + colorCanvas.speed
+        --         colorsCanvasData.yPos = colorsCanvasData.yPos + colorsCanvasData.speed
         --     end
         -- end
 
         if selectedObject ~= 0 then -- if there is a 'selected' object to color...
 
-            -- if MOUSE is IN the area of an 'active' colorCanvas...
-            if inColorCanvas() then
+            -- if MOUSE is IN the area of an 'active' ColorsCanvas...
+            if inColorsCanvas() then
 
                 -- Color update:
                 -- do Instant Preview only for pointers that can "hover"
@@ -406,9 +408,9 @@ local function update(dt) -- this is the whatever functionality needs to happen 
 
 
                 -- Drag:
-                -- if a click/press is 'active' (held down) the colorCanvas can be "dragged"
+                -- if a click/press is 'active' (held down) the ColorsCanvas can be "dragged"
                 if lastClick.active then
-                    colorCanvas.yPos = colorCanvas.yStartDr + (love.mouse.getY() - lastClick.y)
+                    colorsCanvasData.yPos = colorsCanvasData.yStartDr + (love.mouse.getY() - lastClick.y)
                 end
 
             else -- mouse is outside the color selector, so revert to the previous color
@@ -417,22 +419,22 @@ local function update(dt) -- this is the whatever functionality needs to happen 
                 selObj.color = { selObj.color_previous[1], selObj.color_previous[2], selObj.color_previous[3] }
             end
         end
-    end -- end checks related to colorCanvas
+    end -- end checks related to ColorsCanvas
 
 end
 
 
 local function draw() -- this is the whatever functionality needs to happen during "love.draw()"
-    --drawColorCanvas() -- dev test: test-draw direct to screen
+    --drawColorsCanvas() -- dev test: test-draw direct to screen
 
-    drawAppCanvas() -- update the main app window, in the background, then draw it:
-    love.graphics.draw(AppCanvas, 0, 0)
+    drawUIcanvas() -- update the main app window, in the background, then draw it:
+    love.graphics.draw(UIcanvas, 0, 0)
 
     -- draw the (static) Color picker canvas (if active)
-    if colorCanvas.active then
-        love.graphics.draw(ColorsCanvas, colorCanvas.xPos, colorCanvas.yPos)
-        --love.graphics.draw(ColorsCanvas, 400, colorCnvYpos, 0, 0.5, 0.5) -- draw scaled canvas to screen
-        --colorCanvas.yPos = colorCanvas.yPos + 1 -- auto drift
+    if colorsCanvasData.active then
+        love.graphics.draw(colorsCanvas, colorsCanvasData.xPos, colorsCanvasData.yPos)
+        --love.graphics.draw(colorsCanvas, 400, colorCnvYpos, 0, 0.5, 0.5) -- draw scaled canvas to screen
+        --colorsCanvasData.yPos = colorsCanvasData.yPos + 1 -- auto drift
     end
 
     -- draw a little box to show where a click/touch happened
@@ -459,13 +461,13 @@ local function mousepressed(x, y, button, istouch, presses) -- keep both mouse &
     lastClick.active = true
     --lastClick.x = x
     lastClick.y = y
-    colorCanvas.yStartDr = colorCanvas.yPos -- save current Y position of colorCanvas, in case it gets dragged
+    colorsCanvasData.yStartDr = colorsCanvasData.yPos -- save current Y position of ColorsCanvas, in case it gets dragged
 
 
     -- if clicking Outside the color-picker area...
-    if not inColorCanvas() then
+    if not inColorsCanvas() then
         selectedObject = 0 -- de-select current color-able object
-        colorCanvas.active = false -- dismiss the color picker
+        colorsCanvasData.active = false -- dismiss the color picker
     end
 
 end
@@ -493,7 +495,7 @@ local function mousereleased(x, y, button, istouch, presses)
         end
 
         if not istouch then -- if it's a *mouse* click (not a touchscren), consider a click to indicate a final selection:
-            colorCanvas.active = false -- dismiss the color picker
+            colorsCanvasData.active = false -- dismiss the color picker
             selectedObject = 0 -- de-select current colorable object (not necessary, but for clarity)
         else
             -- touchscreens update color on release, but don't close the color select canvas
@@ -513,7 +515,7 @@ local function mousereleased(x, y, button, istouch, presses)
             -- save the starting color before previewing new colors
             o.color_previous = { o.color[1], o.color[2], o.color[3] }
 
-            colorCanvas.active = true -- Show the color picker
+            colorsCanvasData.active = true -- Show the color picker
             -- kmk, could put a break the loop here...
         end
     end
@@ -522,18 +524,18 @@ end
 
 
 local function wheelmoved(x, y)
-    colorCanvas.yPos = colorCanvas.yPos + (y * 20) -- speed & direction probably need to be configurable...
+    colorsCanvasData.yPos = colorsCanvasData.yPos + (y * 20) -- speed & direction probably need to be configurable...
 end
 
 
 local function keypressed(key)
     if key == "pagedown" then -- PageDown button...
         -- scroll down 1 screen height (minus one button size)
-        colorCanvas.yPos = colorCanvas.yPos - (appCanvas.height - (buttonHeight + buttonSpacing))
+        colorsCanvasData.yPos = colorsCanvasData.yPos - (UIcanvasData.height - (buttonHeight + buttonSpacing))
     end
     if key == "pageup" then -- PageUp button...
         -- scroll up 1 screen height (minus one button size)
-        colorCanvas.yPos = colorCanvas.yPos + (appCanvas.height - (buttonHeight + buttonSpacing))
+        colorsCanvasData.yPos = colorsCanvasData.yPos + (UIcanvasData.height - (buttonHeight + buttonSpacing))
     end
 end
 
