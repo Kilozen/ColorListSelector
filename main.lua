@@ -11,10 +11,12 @@
     different font sizes & screen colors.)
 --]]
 
-
 -- require "strict" -- (let the calling program take care of this if needed)
 
-local CLS = require('ColorListSelector')
+
+-- Prepare ColorListSelector (CLS)
+require "ColorListConfig" -- First, get the CLS Config data from wherever you keep the file.
+local CLS = require "ColorListSelector" -- Then get a handle to the API functions for CLS.
 
 
 local appWindow_mobile = {
