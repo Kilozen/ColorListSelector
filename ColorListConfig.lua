@@ -335,8 +335,13 @@ local colorHexList = {
 }
 
 
--- Export / Return the module Data objects to be referenced by ColorListSelector:
-return {
+-- EXPORT Config data (for use by ColorListSelector.lua) --
+--[[
+    Store the Config Data needed externally (by ColorListSelector.lua) in a GLOBAL called 'CLSconfig' 
+    (yeah, it's ugly to use a global, but I don't think Lua 5.1 could pass data as 
+    extra arguments in require() calls yet.)
+--]]
+CLSconfig = { -- This is a GLOBAL var for now --
     UIcanvasData = UIcanvasData,
     colorsCanvasData = colorsCanvasData,
     buttonHeight = buttonHeight,
@@ -345,3 +350,11 @@ return {
     colorHexList = colorHexList,
     buttonList = buttonList,
 }
+
+
+--[[ Return the module Data objects to be referenced by ColorListSelector:
+
+    (This is in case future versions of Love2D use a later version of Lua that
+    supports passing arguments in require() and this won't have to be a global anymore.)
+--]]
+return CLSconfig
