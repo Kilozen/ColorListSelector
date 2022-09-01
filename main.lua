@@ -12,7 +12,8 @@
 --]]
 
 
-require "strict"
+-- require "strict" -- (let the calling program take care of this if needed)
+
 local CLS = require('ColorListSelector')
 
 
