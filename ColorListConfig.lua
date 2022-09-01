@@ -1,39 +1,80 @@
 -- ColorListConfig:
 -- contains the configurable data to be used by --> ColorListSelector.lua
 
--- kmk todo:  create a setting for X position of the color menu... 
+-- kmk todo:  create a setting for X position of the color menu...
 
 -- set the size of the Color buttons in the complete color list
 local buttonHeight = 30 -- default 30
 local buttonSpacing = 6 -- default 6
 
+local UIcanvasData = {
+    --[[
+        The "full screen" of the UI (small smartphone size by default) 
+        Everything specified in ColorListConfig.lua is drawn on THIS canvas. 
+        Normally, you'll just want to make this canvas the same dimensions 
+        that your overall "app" window is.  It will be drawn on top of your app 
+        (but its background is transparent, so your other content shows through.)
+    ]]
+    width = 640 * 1,
+    height = 360 * 1,
+    -- Normally the canvas background color should be left as transparent black,
+    -- but sometimes it's useful set a slight color to be able to see the boundaries.
+    -- bgColor = {0, 0, 1, 0.2},
+    bgColor = { 0, 0, 0, 0 },
+}
 
--- Color-Select Buttons -- trigger the color select menu to appear, and show the currently chosen color 
+local colorsCanvasData = { -- config for the colorsCanvas
+    --[[
+        Here you can set the position & width of the Color Selection window. 
+    --]]
+    xPos = 400, -- x position on the app screen
+    yPos = 0, -- initial y positio (this value will change when user scrolls the window)
+    width = 200, -- ('height' is calculated based on list length)
+    speed = 8, -- scroll speed for things like arrow keys
+    -- Normally the canvas background color should be left as transparent black,
+    -- but sometimes it's useful set a slight color to be able to see the boundaries.
+    -- bgColor = { 0, 1, 0, 0.3 },
+    bgColor = { 0, 0, 0, 0 },
+
+    -- kmk todo: move these into code-only since they're not really "configurable"
+    height = 500, -- (this was just an initial value for development, it's actually recalculated in createColorsCanvas() )
+    yStartDr = 0, -- the y position of the canvas at the start of a Drag
+    active = false,
+}
+
+--[[ Below, you can define as many Buttons as you like, and add them to the button list. 
+     Each button will trigger the Color Selector to appear. 
+     You can 
+--]]
+
+-- Color-Select Buttons -- trigger the color select menu to appear, and show the currently chosen color
 local csButton1 = { -- rectangle button with a text label
     text = "Primary", -- text label on the button
-    -- kmk todo: specify font size, or compute it, or give user a hook to set it? 
+    -- kmk todo: specify font size, or compute it, or give user a hook to set it?
     x = 50,
-    y = 100,
+    y = 140,
     width = 300,
-    height = 100,
+    height = 80,
     color = { .6, .4, .4 }, -- default starting color
-    color_previous = { .6, .4, .4 },      -- kmk todo: remove this from here... add it in code/init. 
+    color_previous = { .6, .4, .4 }, -- kmk todo: remove this from here... add it in code/init.
 }
 
 local csButton2 = {
     text = "Secondary",
     x = 50,
-    y = 220,
+    y = 250,
     width = 300,
-    height = 100,
+    height = 80,
     color = { .4, .4, .6 }, -- default starting color
     color_previous = { .4, .4, .6 },
 }
 
-local ObjectList = { csButton1, csButton2 } -- list of Color-Select Trigger Buttons (rectangle ~objects) to place on screen
+local buttonList = { csButton1, csButton2 } -- list of Color-Select Trigger Buttons (rectangle ~objects) to place on screen
 
 
 ---------------------------------------------------------------------------------------------
+-- kmk: I probably should have put the {RGB}s in a table, so they'd be easier to assign...
+-- maybe each colorEntry = { name="", ColorRGB = {r,g,b} } so access is more "self documenting"
 local colorList = { -- DEFAULT "test" color list... it's ok for later code to overwrite this.
     { "Test Colors", 1, 1, 1 },
     { "Red", 1, 0, 0 },
@@ -296,9 +337,11 @@ local colorHexList = {
 
 -- Export / Return the module Data objects to be referenced by ColorListSelector:
 return {
+    UIcanvasData = UIcanvasData,
+    colorsCanvasData = colorsCanvasData,
     buttonHeight = buttonHeight,
     buttonSpacing = buttonSpacing,
     colorList = colorList,
     colorHexList = colorHexList,
-    ObjectList = ObjectList,
+    buttonList = buttonList,
 }

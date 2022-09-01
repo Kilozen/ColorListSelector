@@ -48,7 +48,8 @@ function love.load()
 
     local gameFont = love.graphics.newFont(40)
     love.graphics.setFont(gameFont)
-    --love.graphics.setBackgroundColor(0.2, 0, 0.2) -- bg color of the main window
+    -- love.graphics.setBackgroundColor(0.2, 0, 0.2) -- bg color of the main window
+
 
     CLS.load() -- let ColorListSelector do its initialization 
 end
@@ -64,11 +65,11 @@ end
 function love.draw()
     love.graphics.print("Example1", 20, 20)
 
-    love.graphics.setColor(0.15, 0.15, 0.9)
-    love.graphics.circle("fill", 200, 50, 40)
+    love.graphics.setColor( CLS.buttonList[2].color )
+    love.graphics.circle("fill", 200, 70, 40)
 
-    love.graphics.setColor(0.9, 0.15, 0.15)
-    love.graphics.circle("fill", 240, 30, 20)
+    love.graphics.setColor( CLS.buttonList[1].color )
+    love.graphics.circle("fill", 240, 50, 20)
 
 
     CLS.draw()

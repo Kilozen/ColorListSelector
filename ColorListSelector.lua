@@ -2,47 +2,35 @@ print(...)
 local thisFile = "ColorListSelector.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
--- 8/26/22 -- 
-local Conf = require('ColorListConfig') -- get all the user 'Config' data for the colors & buttons
--- Import all the User Config data from ColorListConfig (and create local  shortcut names  to use them)
-local buttonHeight = Conf.buttonHeight -- shortcut name
-local buttonSpacing = Conf.buttonSpacing
-local colorList = Conf.colorList
-local colorHexList = Conf.colorHexList
-local testObjList = Conf.ObjectList -- [] kmk ToDo rename testObjList to ~objectList
+-- 8/28/22 --
+
+local Conf             = require('ColorListConfig') -- get all the user 'Config' data for the colors & buttons
+-- Import all the User Config data from ColorListConfig 
+-- (It looks a bit odd to be giving 'shortcut' names that aren't much shorter, but 
+--  these were the local names I was already using before I moved them outside of this file...) 
+local UIcanvasData     = Conf.UIcanvasData
+local colorsCanvasData = Conf.colorsCanvasData
+local buttonHeight     = Conf.buttonHeight
+local buttonSpacing    = Conf.buttonSpacing
+local colorList        = Conf.colorList
+local colorHexList     = Conf.colorHexList
+local buttonList       = Conf.buttonList
 
 
-local selectedObject = 0 -- integer: the Currently Selected (touched) object number from <-- Conf.ObjectList 
+local selectedButton = 0 -- integer: the Currently Selected (touched) button number from <-- Conf.buttonList
 local touchscreen = false -- detect & set this during init
 
 
-local UIcanvasData = {
-    --[[
-        The "full screen" of the app (small smartphone size by default) 
-        Everything specified in ColorListConfig.lua is drawn on THIS canvas. 
-        Normally, you'll probably just want to make this canvas the same dimensions 
-        that your overall "app" window is.  It will be drawn on top of your app 
-        (but its background is transparent, so your other content shows through.)
-    ]]
-    width = 640 * 1,
-    height = 360 * 1
-}
-local UIcanvas = {} -- pre-declare the canvas object to be Local. 
-
-
-local colorsCanvasData = { -- size of the (usually hidden) color picker
-    active = false,
-    width = 200,
-    height = 500, -- this is just an initial value, it's actually calculated in createColorsCanvas()
-    speed = 8, -- scroll speed for things like arrow keys
-    xPos = 400, -- x position on the app screen
-    yPos = 0, -- the y coordinate will change when user scrolls the window
-    yStartDr = 0, -- the y position of the canvas at the start of a Drag
-}
+local UIcanvas = {} -- pre-declare the canvas object to be Local.
 local colorsCanvas = {} -- pre-declare the canvas object to be Local. 
 
 
 --[[ ColorListSelector.lua -- Simple Color Picker UI module for Love2D 
+
+    k, I don't know if this is really very reusable as it is... it's pretty 
+    specific to the use case of some color-select buttons that always stay 
+    on the screen... Maybe a more generic mechansim (just an API call) to 
+    call up the color picker would be more reusable. 
 
     THIS is the 'Library' file... hopefully people can often use it without any 
     modification.  
@@ -62,8 +50,8 @@ local colorsCanvas = {} -- pre-declare the canvas object to be Local.
     The colorsCanvas is scrolled simply by drawing it at different y coordinates
     (most of that tall canvas will be off the top or bottom of the screen.)
 
-    love.draw() -- is pretty simple: 
-    it draws the user's app objects to the UIcanvas, then draws the UIcanvas
+    draw() -- is pretty simple: 
+    it draws the user's buttons to the UIcanvas, then draws the UIcanvas
     to the Love2D app window. 
     and *if* the colorsCanvas is "active", then it also draws the colorsCanvas 
     over the Love2D app window, at its current scrolled y coordinate. 
@@ -86,7 +74,7 @@ local colorsCanvas = {} -- pre-declare the canvas object to be Local.
     a click is their 'decision' so we dismiss the color picker, but a touchscreen
     user can't 'hover', so we regard their click as being a preview try of a color
     and we don't dismiss the picker, until they click off of the color menu. 
-    mousereleased() also checkes to see if any other defined screen objects were
+    mousereleased() also checkes to see if any other defined screen buttons were
     clicked on (specifically, the buttons that call the color picker to appear.)
     
 
@@ -106,7 +94,8 @@ was just one of many 'test' files in 'love2d_per_Tests'.
 So far this has not been version conrolled except for a lot of backup saves, like: Canvas_tests (12).lua 
 --]]
 
---[[
+--[[ ToDos etc. 
+
     TESTS for using a Canvas as a Scrolling select Menu 
     - draw a tall, thin canvas, with text & color boxes 
     - translate it to make it scroll on the screen 
@@ -119,9 +108,10 @@ So far this has not been version conrolled except for a lot of backup saves, lik
     so touchscreen clicks may be handled a bit differently. 
 
     TODO: 
+    - Touchscreen quit working... click dismisses the list... why?  kmkmk 
+
+    - create a "randomize all" button option, or API call? 
     - modularize this & describe "how to use" it. 
-    - give it a proper name (not "Canvas test")
-    - ColorListSelector
 
 
     - make a separate "Demo" test driver file to use this module remotely... 
@@ -205,13 +195,13 @@ local lastClick = { -- save x,y info of last initiation of a mouse click or touc
 
 local function drawAppContent()
     -- just draw any old thing on the screen as a placeholder.  a few rectangles...
-    for i in ipairs(testObjList) do
-        local x = testObjList[i].x
-        local y = testObjList[i].y
-        local recWidth = testObjList[i].width
-        local recHeight = testObjList[i].height
+    for i in ipairs(buttonList) do
+        local x = buttonList[i].x
+        local y = buttonList[i].y
+        local recWidth = buttonList[i].width
+        local recHeight = buttonList[i].height
 
-        love.graphics.setColor(testObjList[i].color)
+        love.graphics.setColor(buttonList[i].color)
 
         local mode = "fill"
         local rx = nil -- 10  -- if you want rounded corners...
@@ -220,7 +210,7 @@ local function drawAppContent()
         love.graphics.rectangle(mode, x, y, recWidth, recHeight, rx, ry, segments)
 
         love.graphics.setColor(0, 0, 0)
-        love.graphics.print(testObjList[i].text, x + 10, y + 10)
+        love.graphics.print(buttonList[i].text, x + 10, y + 10)
     end
 end
 
@@ -229,8 +219,9 @@ local function drawUIcanvas() -- called repeatedly
     love.graphics.setColor(1, 1, 1)
     love.graphics.setCanvas(UIcanvas) -- draw to the other canvas...
     --love.graphics.clear(0, 0, 0) -- opaque black
-    love.graphics.clear() -- transparent black
-    love.graphics.clear(0, 0, 1, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
+    --love.graphics.clear() -- transparent black
+    --love.graphics.clear(0, 0, 1, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
+    love.graphics.clear(UIcanvasData.bgColor)
     drawAppContent()
     love.graphics.setCanvas() -- re-enable drawing to the main screen
     love.graphics.setColor(1, 1, 1)
@@ -310,8 +301,9 @@ local function createColorsCanvas()
 
     love.graphics.setCanvas(colorsCanvas) -- draw to the other canvas...
     -- love.graphics.clear(0, 0, 0) -- opaque black
-    love.graphics.clear() -- transparent black
-    love.graphics.clear(0, 1, 0, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
+    -- love.graphics.clear() -- transparent black
+    -- love.graphics.clear(0, 1, 0, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
+    love.graphics.clear(colorsCanvasData.bgColor)
     drawColorsCanvas()
     love.graphics.setCanvas() -- re-enable drawing to the main screen
 end
@@ -327,8 +319,8 @@ local function load() -- initialization stuff: this should be called from the ma
     end
 
 
-    -- convert a Hex-color list format to our expected color list format... 
-    colorList = convFlatPairsToColorList(colorHexList)
+    -- convert a Hex-color list format to our expected color list format...
+    --colorList = convFlatPairsToColorList(colorHexList)
 
 
 
@@ -352,13 +344,14 @@ local function inColorsCanvas() -- test if mouse/cursor is within the ColorsCanv
 end
 
 
-local function updateObjColor() -- update the color of the currently "selected" object, to the color sample the mouse is over.
+local function updateButtonColor() -- update the color of the currently "selected" button, to the color sample the mouse is over.
     local ccy = love.mouse.getY() - colorsCanvasData.yPos -- cursor y position on the ColorsCanvas
-    local buttonNum = ccYtoB(ccy) -- get the ID (index) of the Button the cursor is over
+    local selectedColor = ccYtoB(ccy) -- get the ID (index) of the Button the cursor is over
     -- print(love.mouse.getY(), ccy, "button", buttonNum,
     --     colorList[buttonNum][1], colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4])
-    local selObj = testObjList[selectedObject]
-    selObj.color = { colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4] }
+    local color = colorList[selectedColor]
+    local selButton = buttonList[selectedButton]
+    selButton.color = { color[2], color[3], color[4] }
 end
 
 
@@ -391,7 +384,7 @@ local function update(dt) -- this is the whatever functionality needs to happen 
         --     end
         -- end
 
-        if selectedObject ~= 0 then -- if there is a 'selected' object to color...
+        if selectedButton ~= 0 then -- if there is a 'selected' button to color...
 
             -- if MOUSE is IN the area of an 'active' ColorsCanvas...
             if inColorsCanvas() then
@@ -399,7 +392,7 @@ local function update(dt) -- this is the whatever functionality needs to happen 
                 -- Color update:
                 -- do Instant Preview only for pointers that can "hover"
                 if touchscreen == false then
-                    updateObjColor()
+                    updateButtonColor()
                     --[[ we don't want to do "instant updates" for touchscreens because then it would select
                         a color even on *drags*, and we can't "undo" on "release" because the touch seems 
                         to retain a .getY() value, so it keeps applying the unintended color.
@@ -415,8 +408,9 @@ local function update(dt) -- this is the whatever functionality needs to happen 
 
             else -- mouse is outside the color selector, so revert to the previous color
 
-                local selObj = testObjList[selectedObject]
-                selObj.color = { selObj.color_previous[1], selObj.color_previous[2], selObj.color_previous[3] }
+                local selButton = buttonList[selectedButton]
+                -- selButton.color = { selButton.color_previous[1], selButton.color_previous[2], selButton.color_previous[3] }
+                selButton.color = selButton.color_previous
             end
         end
     end -- end checks related to ColorsCanvas
@@ -448,11 +442,11 @@ end
 local function mousepressed(x, y, button, istouch, presses) -- keep both mouse & touchscreeen in mind here!
 
     -- Clicking (anywhere) enables possible dragging operations
-    -- Clicking *away* from active areas, dismisses the color picker (and de-selects any objects)
+    -- Clicking *away* from active areas, dismisses the color picker (and de-selects any buttons)
     -- (colors are actually "Selected" elsewhere, in the .update() function, based on x,y hover coordinates)
 
     --> see .mousereleased() for the following funcitonality:
-    -- Releasing on a color-able object, Selects that Object and Activates the color Picker
+    -- Releasing on a color-able button, Selects that button and Activates the color Picker
     -- Releasing a *touch* (mobile screen) does nothing
     -- Releasing a *mouse* click dismisses the color picker (finalizes selection) if it wasn't a "drag"
 
@@ -466,7 +460,7 @@ local function mousepressed(x, y, button, istouch, presses) -- keep both mouse &
 
     -- if clicking Outside the color-picker area...
     if not inColorsCanvas() then
-        selectedObject = 0 -- de-select current color-able object
+        selectedButton = 0 -- de-select current color-able button
         colorsCanvasData.active = false -- dismiss the color picker
     end
 
@@ -481,39 +475,39 @@ local function mousereleased(x, y, button, istouch, presses)
 
     -- Releasing a *mouse* click dismisses the color picker (finalizes selection) if it wasn't a "drag"
     -- Releasing a *touch* (mobile screen) does nothing (keep the color picker visible)
-    -- Clicking (& Releasing) on a color-able object, Selects that Object and Activates the color Picker
+    -- Clicking (& Releasing) on a color-able button, Selects that button and Activates the color Picker
 
 
     -- if the mouse hasn't been 'dragged' significantly, then something was 'mouseclicked'
     -- if y == lastClick.y
     if math.abs(y - lastClick.y) < 5 then
 
-        -- print the current object color to the console
-        if selectedObject ~= 0 then
-            local c = testObjList[selectedObject].color
+        -- print the current button color to the console
+        if selectedButton ~= 0 then
+            local c = buttonList[selectedButton].color
             print("color = ", c[1], c[2], c[3])
         end
 
         if not istouch then -- if it's a *mouse* click (not a touchscren), consider a click to indicate a final selection:
             colorsCanvasData.active = false -- dismiss the color picker
-            selectedObject = 0 -- de-select current colorable object (not necessary, but for clarity)
+            selectedButton = 0 -- de-select current colorable button (not necessary, but for clarity)
         else
             -- touchscreens update color on release, but don't close the color select canvas
-            if selectedObject ~= 0 then -- if there is a 'selected' object to color...
-                updateObjColor()
+            if selectedButton ~= 0 then -- if there is a 'selected' button to color...
+                updateButtonColor()
             end
         end
     end
 
 
-    -- check if any Colorable Screen Objects got clicked:
-    for i in ipairs(testObjList) do
-        local o = testObjList[i] -- 'shortcut' to current Object
-        if x > o.x and y > o.y and x < (o.x + o.width) and y < (o.y + o.height) then -- if "inside" the button...
-            selectedObject = i
+    -- check if any Colorable Screen buttons got clicked:
+    for i in ipairs(buttonList) do
+        local b = buttonList[i] -- 'shortcut' to current button
+        if x > b.x and y > b.y and x < (b.x + b.width) and y < (b.y + b.height) then -- if "inside" the button...
+            selectedButton = i
 
             -- save the starting color before previewing new colors
-            o.color_previous = { o.color[1], o.color[2], o.color[3] }
+            b.color_previous = { b.color[1], b.color[2], b.color[3] }
 
             colorsCanvasData.active = true -- Show the color picker
             -- kmk, could put a break the loop here...
@@ -548,5 +542,6 @@ return {
     draw = draw,
     wheelmoved = wheelmoved,
     mousepressed = mousepressed,
-    mousereleased = mousereleased,
+    mousereleased = mousereleased,  -- callback function 
+    buttonList = buttonList,        -- data structure 
 }
