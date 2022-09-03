@@ -10,43 +10,6 @@ print("[" .. thisFile .. "] loaded/running.")
     is so the user can put the files whereever they want and then specify the paths. 
 --]]
 
----------------------------------------------------------------------------------------
--- Config Data Import preliminaries --
----------------------------------------------------------------------------------------
---[[ 
-    In order to let the user put the ColorListSelector library and the ColorListConfig file
-    wherever they want, it is the user's job to call the "require()" for both of them. 
-
-    Currently the way the library gets access to the config data is through a 
-    specifically named Global --> CLSconfig 
-
-    In later versions of Lua, it could be done by passing a parameter in 
-    the require() call... but I don't think Lua 5.1 supports that. 
---]]
-
--- Import all the User Config data from ColorListConfig
--- (It looks a bit odd to be giving 'shortcut' names that aren't much shorter, but
---  these were the local names I was already using before I moved them outside of this file...)
--- kmk todo - I should probably get rid of all these local copies, because if the user
--- is updating any plain values dynamically, this library won't get the update!
-local buttonHeight     = CLSconfig.buttonHeight -- plain value
-local buttonSpacing    = CLSconfig.buttonSpacing -- plain value
-local UIcanvasData     = CLSconfig.UIcanvasData
-local colorsCanvasData = CLSconfig.colorsCanvasData
-local colorList        = {} -- wait until load() to set = CLSconfig.colorList
-local colorHexList     = CLSconfig.colorHexList
-local buttonList       = CLSconfig.buttonList
-
-
----------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------
-
-local selectedButton = 0 -- integer: the Currently Selected (touched) button number from <-- CLSconfig.buttonList
-local touchscreen = false -- detect & set this during init
-
-
-local UIcanvas = {} -- pre-declare the canvas object to be Local.
-local colorsCanvas = {} -- pre-declare the canvas object to be Local.
 
 --[[ ToDos etc. 
     TODO: 
@@ -148,56 +111,44 @@ local colorsCanvas = {} -- pre-declare the canvas object to be Local.
 --]]
 
 
+---------------------------------------------------------------------------------------
+-- Config Data Import preliminaries --
+---------------------------------------------------------------------------------------
+--[[ 
+    In order to let the user put the ColorListSelector library and the ColorListConfig file
+    wherever they want, it is the user's job to call the "require()" for both of them. 
 
+    Currently the way the library gets access to the config data is through a 
+    specifically named Global --> CLSconfig 
 
--------------------------------------------------------------
---[[  Hex Color stuff -- 
-    Todo: maybe support using a simpler TEXT FILE rather than lua format config? 
-    one line per line, or comma separators, but
-    allow people to use quotes or not, we should parse it either way. 
-    Also accept hex value preceeded by # or 0x or neither. 
+    In later versions of Lua, it could be done by passing a parameter in 
+    the require() call... but I don't think Lua 5.1 supports that. 
 
-    If we do specify a simple text file format, it should Optimise for 
-    *simplicity* (minimze punctuation, because its easier to remove than to add) 
-    and maximize human readablity.  so e.g. it should just be 
-    name (single quotes are probably needed here though , values, carriage return
-    with spaces as separators. 
-    option to reverse order? 
+    (It looks a bit odd below to be giving local 'shortcut' names that aren't much shorter, but
+    these were the local names I was already using before I moved them outside of this file...)
+
+    kmk todo - maybe I should get rid of these local copies, because if the user
+    is updating any 'plain values' dynamically, this library won't get the update!
 --]]
 
+-- 'Import' all the User Config data from ColorListConfig
+local buttonHeight     = CLSconfig.buttonHeight -- plain value
+local buttonSpacing    = CLSconfig.buttonSpacing -- plain value
+local UIcanvasData     = CLSconfig.UIcanvasData
+local colorsCanvasData = CLSconfig.colorsCanvasData
+local colorList        = {} -- wait until load() to set = CLSconfig.colorList
+local colorHexList     = CLSconfig.colorHexList  -- Delete me 
+local buttonList       = CLSconfig.buttonList
 
--- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua {kmk}
-local function Hex2Color(hex, value)
-    --return {tonumber(string.sub(hex, 2, 3), 16)/256, tonumber(string.sub(hex, 4, 5), 16)/256, tonumber(string.sub(hex, 6, 7), 16)/256, value or 1}
-    return { tonumber(string.sub(hex, 1, 2), 16) / 256,
-        tonumber(string.sub(hex, 3, 4), 16) / 256,
-        tonumber(string.sub(hex, 5, 6), 16) / 256, value or 1 }
-end
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
 
-
---[[ This is kind of ugly, but it's just a demonstration of how a user may have 
-     a color list in an unusual format, and want to write a little routine to 
-     convert it to the 'standard' format, rather than editing it by hand. 
---]]
-local function convFlatPairsToColorList(flatTable)
-    local stdFormatList = {}
-
-    for i = 1, #flatTable, 2 do -- read from input table, 2 at a time
-        --print(flatTable[i], flatTable[i + 1])
-
-        -- convert hex to RGB...
-        local rgb = Hex2Color(flatTable[i])
-
-        -- add new entry to end of the fixed format list
-        stdFormatList[#stdFormatList + 1] = { flatTable[i + 1], rgb[1], rgb[2], rgb[3] }
-        local tt = stdFormatList[#stdFormatList]
-        --print('{' .. tt[1], tt[2], tt[3], tt[4] .. '}')
-    end
-    return stdFormatList
-end
+local selectedButton = 0 -- integer: the Currently Selected (touched) button number from <-- CLSconfig.buttonList
+local touchscreen = false -- detect & set this during init
 
 
--------------------------------------------------------------
+local UIcanvas = {} -- pre-declare the canvas object to be Local.
+local colorsCanvas = {} -- pre-declare the canvas object to be Local.
 
 
 local lastClick = { -- save x,y info of last initiation of a mouse click or touch (for dragging operations)
@@ -546,6 +497,58 @@ local function keypressed(key)
         colorsCanvasData.yPos = colorsCanvasData.yPos + (UIcanvasData.height - (buttonHeight + buttonSpacing))
     end
 end
+
+
+--============================================================================--
+--[[  Hex Color stuff -- 
+    This section is not "really" part of the Library.  It's just an example 
+    of a function that might go in user code, to convert some other color 
+    list format into the format used by this library. 
+
+    Todo: maybe support using a simpler TEXT FILE rather than lua format config? 
+    one line per line, or comma separators, but
+    allow people to use quotes or not, we should parse it either way. 
+    Also accept hex value preceeded by # or 0x or neither. 
+
+    If we do specify a simple text file format, it should Optimise for 
+    *simplicity* (minimze punctuation, because its easier to remove than to add) 
+    and maximize human readablity.  so e.g. it should just be 
+    name (single quotes are probably needed here though , values, carriage return
+    with spaces as separators. 
+    option to reverse order? 
+--]]
+
+
+-- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua {kmk}
+local function Hex2Color(hex, value)
+    --return {tonumber(string.sub(hex, 2, 3), 16)/256, tonumber(string.sub(hex, 4, 5), 16)/256, tonumber(string.sub(hex, 6, 7), 16)/256, value or 1}
+    return { tonumber(string.sub(hex, 1, 2), 16) / 256,
+        tonumber(string.sub(hex, 3, 4), 16) / 256,
+        tonumber(string.sub(hex, 5, 6), 16) / 256, value or 1 }
+end
+
+
+--[[ This is kind of ugly, but it's just a demonstration of how a user may have 
+     a color list in an unusual format, and want to write a little routine to 
+     convert it to the 'standard' format, rather than editing it by hand. 
+--]]
+local function convFlatPairsToColorList(flatTable)
+    local stdFormatList = {}
+
+    for i = 1, #flatTable, 2 do -- read from input table, 2 at a time
+        --print(flatTable[i], flatTable[i + 1])
+
+        -- convert hex to RGB...
+        local rgb = Hex2Color(flatTable[i])
+
+        -- add new entry to end of the fixed format list
+        stdFormatList[#stdFormatList + 1] = { flatTable[i + 1], rgb[1], rgb[2], rgb[3] }
+        local tt = stdFormatList[#stdFormatList]
+        --print('{' .. tt[1], tt[2], tt[3], tt[4] .. '}')
+    end
+    return stdFormatList
+end
+--============================================================================--
 
 
 -- Return the Module functions which can be called from the outside:
