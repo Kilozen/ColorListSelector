@@ -2,8 +2,8 @@ print(...)
 local thisFile = "ColorListSelector.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
---[[ 
-    TO USE this module, the user application should call two require()s, something like this: 
+--[[ TO USE this module...  
+    The user application should call two require()s, something like this: 
         require "ColorListConfig" 
         local CLS = require "ColorListSelector" 
     The reason we don't have ColorListSelector just require() ColorListConfig itself 
@@ -14,48 +14,92 @@ print("[" .. thisFile .. "] loaded/running.")
 -- Config Data Import preliminaries --
 ---------------------------------------------------------------------------------------
 --[[ 
-    Yuck... kmkmk TODO:  figure out how to allow the user to put libraries & config
-    where ever they want, and pass either the Config Data, or the Path, to ColorListSelector.lua 
+    In order to let the user put the ColorListSelector library and the ColorListConfig file
+    wherever they want, it is the user's job to call the "require()" for both of them. 
 
-    In later versions of Lua, it could be done by passing a ~path parameter in 
-    the require() call... but I don't think Lua 5.1 supports that.  So for the 
-    time being, I'm requiring use of a GLOBAL var named 'CLSconfig' for the user 
-    to pass config data to CLS. 
+    Currently the way the library gets access to the config data is through a 
+    specifically named Global --> CLSconfig 
+
+    In later versions of Lua, it could be done by passing a parameter in 
+    the require() call... but I don't think Lua 5.1 supports that. 
 --]]
-
---local Conf             = require('ColorListConfig') -- get all the user 'Config' data for the colors & buttons
---local Conf             = require "lib.ColorListSelector.ColorListConfig" -- get all the user 'Config' data for the colors & buttons
-local Conf = CLSconfig
 
 -- Import all the User Config data from ColorListConfig
 -- (It looks a bit odd to be giving 'shortcut' names that aren't much shorter, but
 --  these were the local names I was already using before I moved them outside of this file...)
-local UIcanvasData     = Conf.UIcanvasData
-local colorsCanvasData = Conf.colorsCanvasData
-local buttonHeight     = Conf.buttonHeight
-local buttonSpacing    = Conf.buttonSpacing
-local colorList        = {} -- wait until load() to set = Conf.colorList
-local colorHexList     = Conf.colorHexList
-local buttonList       = Conf.buttonList
+-- kmk todo - I should probably get rid of all these local copies, because if the user
+-- is updating any plain values dynamically, this library won't get the update!
+local buttonHeight     = CLSconfig.buttonHeight -- plain value
+local buttonSpacing    = CLSconfig.buttonSpacing -- plain value
+local UIcanvasData     = CLSconfig.UIcanvasData
+local colorsCanvasData = CLSconfig.colorsCanvasData
+local colorList        = {} -- wait until load() to set = CLSconfig.colorList
+local colorHexList     = CLSconfig.colorHexList
+local buttonList       = CLSconfig.buttonList
 
 
 ---------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------
 
-local selectedButton = 0 -- integer: the Currently Selected (touched) button number from <-- Conf.buttonList
+local selectedButton = 0 -- integer: the Currently Selected (touched) button number from <-- CLSconfig.buttonList
 local touchscreen = false -- detect & set this during init
 
 
 local UIcanvas = {} -- pre-declare the canvas object to be Local.
 local colorsCanvas = {} -- pre-declare the canvas object to be Local.
 
+--[[ ToDos etc. 
+    TODO: 
+    - Touchscreen quit working... click dismisses the list... why?  kmkmk 
 
---[[ ColorListSelector.lua -- Simple Color Picker UI module for Love2D 
+    - create a "Randomize all" button option / API call 
 
-    k, I don't know if this is really very reusable as it is... it's pretty 
+
+    - make PgUp/Dn arrows for touchscreen? 
+    - (future: make a mini-list sidebar for faster scrolling?)
+
+    - limitation: ~288 colors works on desktop, but results in a canvass that is TOO BIG for android l2d.
+    - (figure out what the limit is, and why.)
+
+    - bug: scroll wheel & PgUp/Dn can move the window when it's invisible 
+    - put limits to scrolling far off screen. 
+
+    - ?draw a white box on buttons to show a Current selection? 
+    - cosmetic improvements (rounded buttons?)
+    - make fit more exact for any mobile screen (scale?)
+]]
+
+
+--[[ -- CHANGE LOG (read upward)
+    8/31/22 - (this is now Version tracked in GitHub, so change comments may be there instead.) 
+
+    8/26/22 - moved a bunch of pure-data / config stuff out of here and into ColorListConfig.lua 
+    cleaned up the Naming of things. 
+
+    8/25/22 - changing the name from "Canvas_tests.lua" to ColorListSelector.lua 
+    and moving it to a separate project folder of its own.  Prior to this it 
+    was just one of many 'test' files in 'love2d_per_Tests'. 
+
+    Earlier this had only been version conrolled via a lot of backup saves, like: Canvas_tests (12).lua 
+
+    TESTS for using a Canvas as a Scrolling select Menu 
+    - draw a tall, thin canvas, with text & color boxes 
+    - translate it to make it scroll on the screen 
+
+    For development: create one Big 'desktop' canvas/window,  
+    and, within it, a small 'app' canvas, & the color selector canvas. 
+
+    When implementing UI interactions, keep in mind that Mouse "hover" also 
+    shows color selection effects instantly... but touchscreens can't do this, 
+    so touchscreen clicks may be handled a bit differently. 
+--]]
+
+--[[ About ColorListSelector.lua -- Simple Color Picker UI module for Love2D 
+
+    I don't know if this is really very reusable as it is... it's pretty 
     specific to the use case of some color-select buttons that always stay 
-    on the screen... Maybe a more generic mechansim (just an API call) to 
-    call up the color picker would be more reusable. 
+    on the screen... Maybe make a more generic mechansim (just an API call) 
+    to call up the color picker, to be more reusable. 
 
     THIS is the 'Library' file... hopefully people can often use it without any 
     modification.  
@@ -101,67 +145,10 @@ local colorsCanvas = {} -- pre-declare the canvas object to be Local.
     and we don't dismiss the picker, until they click off of the color menu. 
     mousereleased() also checkes to see if any other defined screen buttons were
     clicked on (specifically, the buttons that call the color picker to appear.)
-    
-
-    API: all data and functions are *Local* to this module, *except* for 
-    the Love2D Callback functions. 
-
 --]]
 
---[[ -- CHANGE LOG (read upward)
-8/26/22 - moved a bunch of pure-data / config stuff out of here and into ColorListConfig.lua 
-cleaned up the Naming of things. 
-
-8/25/22 - changing the name from "Canvas_tests.lua" to ColorListSelector.lua 
-and moving it to a separate project folder of its own.  Prior to this it 
-was just one of many 'test' files in 'love2d_per_Tests'. 
-
-So far this has not been version conrolled except for a lot of backup saves, like: Canvas_tests (12).lua 
---]]
-
---[[ ToDos etc. 
-
-    TESTS for using a Canvas as a Scrolling select Menu 
-    - draw a tall, thin canvas, with text & color boxes 
-    - translate it to make it scroll on the screen 
-
-    For development: create one Big 'desktop' canvas/window,  
-    and, within it, a small 'app' canvas, & the color selector canvas. 
-
-    When implementing UI interactions, keep in mind that Mouse "hover" also 
-    shows color selection effects instantly... but touchscreens can't do this, 
-    so touchscreen clicks may be handled a bit differently. 
-
-    TODO: 
-    - Touchscreen quit working... click dismisses the list... why?  kmkmk 
-
-    - create a "randomize all" button option, or API call? 
-    - modularize this & describe "how to use" it. 
 
 
-    - make a separate "Demo" test driver file to use this module remotely... 
-    - (then do the same in DragonPaint)
-
-
-    - make a command to "Random Pick"? 
-    - make PgUp/Dn arrows for touchscreen? 
-    - (future: make a mini-list sidebar for faster scrolling?)
-
-    - limitation: ~288 colors works on desktop, but results in a canvass that is TOO BIG for android l2d.
-    - (figure out what the limit is, and why.)
-
-    - bug: scroll wheel & PgUp/Dn can move the window when it's invisible 
-    - put limits to scrolling far off screen. 
-
-    - ?draw a white box on buttons to ack. a selection? 
-    - cosmetic improvements (rounded buttons?)
-    - make fit more exact for any mobile screen (scale?)
-
-    [] Think about writing this WHOLE thing to be "modular" / a separate, reusable file. 
-       and the specific buttons and colors are configured in a 3rd separate file. 
-
-    Also, Publish this as an independent, reusable Module on GitHub. 
-]]
 
 -------------------------------------------------------------
 --[[  Hex Color stuff -- 
@@ -179,7 +166,7 @@ So far this has not been version conrolled except for a lot of backup saves, lik
 --]]
 
 
--- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua  {kmk}
+-- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua {kmk}
 local function Hex2Color(hex, value)
     --return {tonumber(string.sub(hex, 2, 3), 16)/256, tonumber(string.sub(hex, 4, 5), 16)/256, tonumber(string.sub(hex, 6, 7), 16)/256, value or 1}
     return { tonumber(string.sub(hex, 1, 2), 16) / 256,
@@ -346,13 +333,10 @@ local function load() -- initialization stuff: this should be called from the ma
         touchscreen = false
     end
 
-    -- convert a Hex-color list format to our expected color list format...
-    -- colorList = convFlatPairsToColorList(colorHexList) -- (actually this should be done in the user program)
-
     -- The user app may have modified the Global (config) color list after this file was
     -- loaded and before load() was called, so make sure our local copy of the table is
     -- up to date.
-    colorList = Conf.colorList
+    colorList = CLSconfig.colorList
 
     -- (manually painting the "app canvas" into the main window gives flexibility to show all 'windows' during development)
     createUIcanvas()
@@ -576,6 +560,6 @@ return {
     buttonList = buttonList, -- data structure
 
     -- This last function is not "really" part of the library, it's just
-    -- an example of how a user might convert an incompatible list format.
+    -- a demo of how a user might convert an incompatible list format.
     convFlatPairsToColorList = convFlatPairsToColorList
 }
