@@ -34,7 +34,7 @@ local UIcanvasData     = Conf.UIcanvasData
 local colorsCanvasData = Conf.colorsCanvasData
 local buttonHeight     = Conf.buttonHeight
 local buttonSpacing    = Conf.buttonSpacing
-local colorList        = Conf.colorList
+local colorList        = {} -- wait until load() to set = Conf.colorList
 local colorHexList     = Conf.colorHexList
 local buttonList       = Conf.buttonList
 
@@ -188,9 +188,12 @@ local function Hex2Color(hex, value)
 end
 
 
--- meh.. this is ugly but for testing now...
+--[[ This is kind of ugly, but it's just a demonstration of how a user may have 
+     a color list in an unusual format, and want to write a little routine to 
+     convert it to the 'standard' format, rather than editing it by hand. 
+--]]
 local function convFlatPairsToColorList(flatTable)
-    local fixedList = {}
+    local stdFormatList = {}
 
     for i = 1, #flatTable, 2 do -- read from input table, 2 at a time
         --print(flatTable[i], flatTable[i + 1])
@@ -199,11 +202,11 @@ local function convFlatPairsToColorList(flatTable)
         local rgb = Hex2Color(flatTable[i])
 
         -- add new entry to end of the fixed format list
-        fixedList[#fixedList + 1] = { flatTable[i + 1], rgb[1], rgb[2], rgb[3] }
-        local tt = fixedList[#fixedList]
+        stdFormatList[#stdFormatList + 1] = { flatTable[i + 1], rgb[1], rgb[2], rgb[3] }
+        local tt = stdFormatList[#stdFormatList]
         --print('{' .. tt[1], tt[2], tt[3], tt[4] .. '}')
     end
-    return fixedList
+    return stdFormatList
 end
 
 
@@ -343,11 +346,13 @@ local function load() -- initialization stuff: this should be called from the ma
         touchscreen = false
     end
 
-
     -- convert a Hex-color list format to our expected color list format...
-    --colorList = convFlatPairsToColorList(colorHexList)
+    -- colorList = convFlatPairsToColorList(colorHexList) -- (actually this should be done in the user program)
 
-
+    -- The user app may have modified the Global (config) color list after this file was
+    -- loaded and before load() was called, so make sure our local copy of the table is
+    -- up to date.
+    colorList = Conf.colorList
 
     -- (manually painting the "app canvas" into the main window gives flexibility to show all 'windows' during development)
     createUIcanvas()
@@ -569,4 +574,8 @@ return {
     mousepressed = mousepressed,
     mousereleased = mousereleased, -- callback function
     buttonList = buttonList, -- data structure
+
+    -- This last function is not "really" part of the library, it's just
+    -- an example of how a user might convert an incompatible list format.
+    convFlatPairsToColorList = convFlatPairsToColorList
 }
