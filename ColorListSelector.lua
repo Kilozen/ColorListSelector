@@ -2,7 +2,7 @@ print(...)
 local thisFile = "ColorListSelector.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
---[[ TO USE this module...  
+--[[ To USE this module...  
     The user application should call two require()s, something like this: 
         require "ColorListConfig" 
         local CLS = require "ColorListSelector" 
@@ -15,8 +15,10 @@ print("[" .. thisFile .. "] loaded/running.")
     TODO: 
     - Touchscreen quit working... click dismisses the list... why?  kmkmk 
 
-    - create a "Randomize all" button option / API call 
+    - color Selector should open at the *currently* set color. 
 
+    - maybe print the color Names on the select buttons also. 
+      (and their RGB or Hex values?)
 
     - make PgUp/Dn arrows for touchscreen? 
     - (future: make a mini-list sidebar for faster scrolling?)
@@ -137,7 +139,6 @@ local buttonSpacing    = CLSconfig.buttonSpacing -- plain value
 local UIcanvasData     = CLSconfig.UIcanvasData
 local colorsCanvasData = CLSconfig.colorsCanvasData
 local colorList        = {} -- wait until load() to set = CLSconfig.colorList
-local colorHexList     = CLSconfig.colorHexList  -- Delete me 
 local buttonList       = CLSconfig.buttonList
 
 ---------------------------------------------------------------------------------------
@@ -275,6 +276,20 @@ local function createColorsCanvas()
 end
 
 
+local function randomizeButtonColors()
+
+    for i in ipairs(buttonList) do
+
+        local buttonObj = buttonList[i]
+        local rndItem = math.random(#colorList)
+
+        buttonObj.color_listNumber = rndItem
+        -- kmk we should just remember the button numbers and not save the redundant RGB values...
+        buttonObj.color = { colorList[rndItem][2], colorList[rndItem][3], colorList[rndItem][4] } -- pack into a Table...
+    end
+end
+
+
 local function load() -- initialization stuff: this should be called from the main program's love.load()
 
     -- detect whether the device is using a touchscreen UI
@@ -314,9 +329,11 @@ local function updateButtonColor() -- update the color of the currently "selecte
     local selectedColor = ccYtoB(ccy) -- get the ID (index) of the Button the cursor is over
     -- print(love.mouse.getY(), ccy, "button", buttonNum,
     --     colorList[buttonNum][1], colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4])
-    local color = colorList[selectedColor]
-    local selButton = buttonList[selectedButton]
-    selButton.color = { color[2], color[3], color[4] }
+    local colorObj = colorList[selectedColor]
+    local selButtonObj = buttonList[selectedButton]
+
+    selButtonObj.color_listNumber = selectedColor -- kmk we could just remember the button numbers and not save the RGB values...
+    selButtonObj.color = { colorObj[2], colorObj[3], colorObj[4] }
 end
 
 
@@ -474,6 +491,15 @@ local function mousereleased(x, y, button, istouch, presses)
             -- save the starting color before previewing new colors
             b.color_previous = { b.color[1], b.color[2], b.color[3] }
 
+
+            local selButtonObj = buttonList[selectedButton]
+            -- selButton.color_listNumber = selectedColor -- kmk we could just remember the button numbers and not save the RGB values...
+            print("button = " .. selectedButton)
+            print("listNumber = " .. selButtonObj.color_listNumber)
+
+            colorsCanvasData.yPos = -ccBtoY(selButtonObj.color_listNumber) -- position the Selector at the currently set color
+            print("yPos = " .. colorsCanvasData.yPos)
+
             colorsCanvasData.active = true -- Show the color picker
             -- kmk, could put a break the loop here...
         end
@@ -548,6 +574,8 @@ local function convFlatPairsToColorList(flatTable)
     end
     return stdFormatList
 end
+
+
 --============================================================================--
 
 
@@ -561,6 +589,7 @@ return {
     mousepressed = mousepressed,
     mousereleased = mousereleased, -- callback function
     buttonList = buttonList, -- data structure
+    randomizeButtonColors = randomizeButtonColors,
 
     -- This last function is not "really" part of the library, it's just
     -- a demo of how a user might convert an incompatible list format.
