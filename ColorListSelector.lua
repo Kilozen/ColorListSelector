@@ -119,7 +119,7 @@ print("[" .. thisFile .. "] loaded/running.")
 
 
 ---------------------------------------------------------------------------------------
--- Config Data Import preliminaries -- 
+-- Config Data Import preliminaries --
 ---------------------------------------------------------------------------------------
 --[[ 
     In order to let the user put the ColorListSelector library and the ColorListConfig file
@@ -166,7 +166,9 @@ local lastClick = { -- save x,y info of last initiation of a mouse click or touc
 
 
 local function drawAppContent()
-    -- just draw any old thing on the screen as a placeholder.  a few rectangles...
+    -- Most of the User App content would be drawn in the user's own program.
+    -- This will probably only draw the color-select buttons they configure.
+
     for i in ipairs(buttonList) do
         local x = buttonList[i].x
         local y = buttonList[i].y
@@ -201,7 +203,7 @@ end
 
 
 local function createUIcanvas() -- called once
-    -- create the  Canvas that represents the entire App (within the development 'desktop' canvas)
+    -- create the  Canvas that represents the entire App area (within the development 'desktop' canvas)
 
     UIcanvas = love.graphics.newCanvas(UIcanvasData.width, UIcanvasData.height)
     drawUIcanvas()
@@ -269,9 +271,9 @@ local function createColorsCanvas()
     -- just create the canvas object, and draw it (once) in the background.
     -- this is a *static* canvas, drawn once at startup.
 
-    local y = ccBtoY(#colorList + 1) -- get Y coordinate of the LAST color button
+    local y = ccBtoY(#colorList + 1) -- calculate the Y coordinate of the LAST color button
+    colorsCanvasData.height = y -- use that as the color list size (total rectangle height)
 
-    colorsCanvasData.height = y -- todo: calculate this from color list size
     colorsCanvas = love.graphics.newCanvas(colorsCanvasData.width, colorsCanvasData.height)
 
     love.graphics.setCanvas(colorsCanvas) -- draw to the other canvas...
@@ -313,6 +315,15 @@ local function load() -- initialization stuff: this should be called from the ma
     -- loaded and before load() was called, so make sure our local copy of the table is
     -- up to date.
     colorList = CLSconfig.colorList
+
+    colorsCanvasData.yStartDr = 0 -- (the y position of the canvas at the start of a mouse Drag)
+    colorsCanvasData.active = false -- color picker begins inactive
+
+    -- initialize non-configurable fields in the User buttons 
+    for i = 1, #buttonList do
+        buttonList[i].color_listNumber = 1
+        buttonList[i].color_previous = buttonList[i].color
+    end
 
     -- (manually painting the "app canvas" into the main window gives flexibility to show all 'windows' during development)
     createUIcanvas()
@@ -558,7 +569,7 @@ end
 local function formatColorList(flatTable)
     local stdFormatList = {}
 
-    for i = 1, #flatTable, 4 do -- read from input table, 4 at a time 
+    for i = 1, #flatTable, 4 do -- read from input table, 4 at a time
         -- print("i = " .. i, flatTable[i])
 
         -- Each line of this input table has two fields:

@@ -1,11 +1,27 @@
--- ColorListConfig:
--- contains the configurable data to be used by --> ColorListSelector.lua
+--[[ ColorListConfig:
+    Contains the configurable data to be used by --> ColorListSelector.lua
 
--- kmk todo:  create a setting for X position of the color menu...
+    ToDo: Figure out how much of the code comments to remove from the code 
+    and move to external documentation. 
 
--- set the size of the Color buttons in the complete color list
+    This file is meant to contain just User-Configurable data and initial values. 
+    [The library code (ColorListSelector.lua) may also insert other related 
+    variables into these same data structures (such as the current position 
+    of a scrolling menu), but the user should not need to be aware of that.]  
+
+    The user app must "require "ColorListConfig", but rather than modifying this 
+    file where it is, the user app would likely make a local copy of this file 
+    somewhere convenient, and modify it and 'require()' that modified copy. 
+
+    Two kinds of "Buttons" are mentioned:
+    The Application/User-defined buttons, which trigger the Color Selector menu,
+    and "remember" the current color choices.
+    And the auto-generated buttons in the long color Selector List.
+--]]
+
+-- set the size/spacing of the Color buttons in the color List menu
 local buttonHeight = 30 -- default 30
-local buttonSpacing = 6 -- default 6
+local buttonSpacing = 4 -- default 6.. maybe 4
 
 
 local UIcanvasData = {
@@ -40,49 +56,44 @@ local colorsCanvasData = { -- config for the colorsCanvas
     -- but sometimes it's useful set a slight color to be able to see the boundaries.
     -- bgColor = { 0, 1, 0, 0.3 },
     bgColor = { 0, 0, 0, 0 },
-
-    -- kmk todo: move these into code-only since they're not really "configurable"
-    height = 500, -- (this was just an initial value for development, it's actually recalculated in createColorsCanvas() )
-    yStartDr = 0, -- the y position of the canvas at the start of a Drag
-    active = false,
 }
 
---[[ Below, you can define as many Buttons as you like, and add them to the button list. 
+--=========================================================================================--
+--[[ Define User/Application buttons -- 
+     which trigger the Color Selector menu, and "remember" the current color choices. 
+
+     Below, you can define as many Buttons as you like, and add them to the button list. 
      Each button will trigger the Color Selector to appear. 
-     You can 
 --]]
 
--- Color-Select Buttons -- trigger the color select menu to appear, and show the currently chosen color
-local csButton1 = { -- rectangle button with a text label
+-- Trigger the color select menu to appear, and show the currently chosen color
+-- They're just rectangle buttons with a text label.
+local userButton1 = {
     text = "Primary", -- text label on the button
     -- kmk todo: specify font size, or compute it, or give user a hook to set it?
     x = 50,
     y = 140,
     width = 300,
     height = 80,
-    color = { .6, .4, .4 }, -- default starting color
-
-    -- kmk todo: remove these from here... add it in code/init.
-    color_listNumber = 1, -- kmk, actually, we could just save list numbers for everything, rather than colors...
-    color_previous = { .6, .4, .4 },
+    color = { .6, .4, .4 } -- Starting color (can be anything)
+    -- (incidentally, the "current" color selection is actually tracked 
+    -- by its list index number, in a field called "color_listNumber") 
 }
 
-local csButton2 = {
+local userButton2 = {
     text = "Secondary",
     x = 50,
     y = 250,
     width = 300,
     height = 80,
-    color = { .4, .4, .6 }, -- default starting color
-
-    color_listNumber = 1,
-    color_previous = { .4, .4, .6 },
+    color = { .4, .4, .6 } -- Starting color 
 }
 
-local buttonList = { csButton1, csButton2 } -- list of Color-Select Trigger Buttons (rectangle ~objects) to place on screen
+-- list of User/App color-select Triggering buttons (rectangle objects) to place on screen
+local buttonList = { userButton1, userButton2 }
 
 
----------------------------------------------------------------------------------------------
+--=========================================================================================--
 --[[ Note that the  'colorList' table  used at runtime uses named fields, to make the 
     operation of the code more readable, whereas the initial 'colorListData' definitions 
     in the config files have more of a simple flat format (CSV = comma separated values) 
@@ -119,8 +130,14 @@ local colorList = { -- DEFAULT "test" color list... it's ok for later code to ov
     { colorName = "Yellow", rgb = { 1, 1, 0 } },
     { colorName = "Magenta", rgb = { 1, 0, 1 } },
 }
+--[[ Above is the format the code actually uses internally, but it's 
+    a pain to edit all that verbosity, so, below is an easier-to-type 
+    format that is what I think people will prefer to use. 
+    The function [CLS.]formatColorList() converts the format below 
+    into the format above. 
+--]]
 
-local colorListData = {  -- Flat list, 4 items per "line" 
+local colorListData = { -- Flat list, 4 items per "line"
     "Test Colors", 1, 1, 1,
     "Red", 1, 0, 0,
     "Yellow", 1, 1, 0,
@@ -136,17 +153,12 @@ local colorListData = {  -- Flat list, 4 items per "line"
     "dBlue", 0, 0, .6,
 }
 
-
---[[
-    kmk: currently the canvas size of the list below is too big for android to handle! 
-    I guess making a giant canvas is not very memory efficient, but re-implement it to 
-    generate the buttons dynamically as they scroll would take some effort... so do that later. 
-    (implement it like side-scolling platformers do?)
-    Determine what the max is for now. 
+--[[ Below is an example of a user's custom color list format. 
+    To use a custom format, the user must define their own formatColorList() 
+    to convert it to the libraries prescribed format. 
+    It's a Flat list, 2 items per "line"
+    Three (2 digit) hex values are stuck together: need to convert them to 3 RGB values. 
 --]]
-
--- Flat list, 2 items per "line" 
--- 3 hex values. need to convert to 3 RGB values 
 local colorHexList = {
     'FFFFFF', 'White',
     'F7F9F9', 'Snowflake',
@@ -380,6 +392,16 @@ local colorHexList = {
     'FFD6F6', 'Petalite',
     'FBEDFA', 'Pearl',
 }
+--[[
+    kmk: currently the canvas size of the list above is too big for android to handle! 
+    I guess making a giant canvas is not very memory efficient. 
+
+    Todo: re-implement it to generate the buttons dynamically as they scroll. 
+    will take some effort... so do it later. 
+    (implement it like side-scolling platformers do?)
+    Determine what the max is for now. 
+--]]
+
 
 
 -- EXPORT Config data (for use by ColorListSelector.lua) --
