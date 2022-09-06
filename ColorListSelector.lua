@@ -13,9 +13,12 @@ print("[" .. thisFile .. "] loaded/running.")
 
 --[[ ToDos etc. 
     TODO: 
-    - Touchscreen quit working... click dismisses the list... why?  kmkmk 
+    - data fields in ColorListConfig.lua which are not config, but only use by the program should 
+      be removed from Config file. 
 
-    - color Selector should open at the *currently* set color. 
+    - 'remember' all colors by their list index, don't redundantly store their RGB values 
+
+    - Touchscreen quit working... click dismisses the list... why?  kmkmk 
 
     - maybe print the color Names on the select buttons also. 
       (and their RGB or Hex values?)
@@ -27,8 +30,9 @@ print("[" .. thisFile .. "] loaded/running.")
     - limitation: ~288 colors works on desktop, but results in a canvass that is TOO BIG for android l2d.
     - (figure out what the limit is, and why.)
 
-    - bug: scroll wheel & PgUp/Dn can move the window when it's invisible 
-    - put limits to scrolling far off screen. 
+    {{The following two comments became irrelevant once we made the list open at the currently selected color}}
+    xx  bug: scroll wheel & PgUp/Dn can move the window when it's invisible 
+    xx  put limits to scrolling far off screen. 
 
     - ?draw a white box on buttons to show a Current selection? 
     - cosmetic improvements (rounded buttons?)
@@ -115,7 +119,7 @@ print("[" .. thisFile .. "] loaded/running.")
 
 
 ---------------------------------------------------------------------------------------
--- Config Data Import preliminaries --
+-- Config Data Import preliminaries -- 
 ---------------------------------------------------------------------------------------
 --[[ 
     In order to let the user put the ColorListSelector library and the ColorListConfig file
@@ -139,7 +143,7 @@ local buttonHeight     = CLSconfig.buttonHeight -- plain value
 local buttonSpacing    = CLSconfig.buttonSpacing -- plain value
 local UIcanvasData     = CLSconfig.UIcanvasData
 local colorsCanvasData = CLSconfig.colorsCanvasData
-local colorList        = {} -- wait until load() to set = CLSconfig.colorList
+local colorList        = CLSconfig.colorList -- (this gets updated in load() because the user can modify the config)
 local buttonList       = CLSconfig.buttonList
 
 ---------------------------------------------------------------------------------------
@@ -498,7 +502,8 @@ local function mousereleased(x, y, button, istouch, presses)
             selectedButton = i
 
             -- save the starting color before previewing new colors
-            b.color_previous = { b.color[1], b.color[2], b.color[3] }
+            -- b.color_previous = { b.color[1], b.color[2], b.color[3] }
+            b.color_previous = b.color
 
 
             local selButtonObj = buttonList[selectedButton]
@@ -550,11 +555,32 @@ end
     Users can use whatever format they like for data entry, and then overwrite 
     formatColorList() with their own conversion routine if they prefer to. 
 --]]
+local function formatColorList(flatTable)
+    local stdFormatList = {}
 
-local function formatColorList(flatTable) -- kmk TODO: make a "default" CSV table version
+    for i = 1, #flatTable, 4 do -- read from input table, 4 at a time 
+        -- print("i = " .. i, flatTable[i])
 
+        -- Each line of this input table has two fields:
+        local colorNameField = i
+        local redField = i + 1
+        local greenField = i + 2
+        local blueField = i + 3
+
+        -- add new entry to end of the fixed format list
+        local newIndex = #stdFormatList + 1
+
+        stdFormatList[newIndex] = {}
+        stdFormatList[newIndex].colorName = flatTable[colorNameField]
+        stdFormatList[newIndex].rgb = { flatTable[redField], flatTable[greenField], flatTable[blueField] }
+    end
+
+    flatTable = nil -- Delete the source table (to free memory) now that it's converted to standard format.
+    return stdFormatList
 end
 
+
+--============================================================================--
 
 --[[  Hex Color stuff -- 
     This section is not "really" part of the Library.  It's just an example 

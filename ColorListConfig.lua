@@ -393,9 +393,10 @@ CLSconfig = { -- This is a GLOBAL var for now --
     colorsCanvasData = colorsCanvasData,
     buttonHeight = buttonHeight,
     buttonSpacing = buttonSpacing,
-    colorList = colorList,
-    colorHexList = colorHexList,
     buttonList = buttonList,
+    colorList = colorList,
+    colorListData = colorListData,
+    colorHexList = colorHexList, -- (this Hex stuff is just an extra example.. not core content)
 }
 
 
