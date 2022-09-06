@@ -20,6 +20,7 @@ print("[" .. thisFile .. "] loaded/running.")
     - maybe print the color Names on the select buttons also. 
       (and their RGB or Hex values?)
 
+    - maybe provide a "lookup color by name" utility?  returns the index. 
     - make PgUp/Dn arrows for touchscreen? 
     - (future: make a mini-list sidebar for faster scrolling?)
 
@@ -240,7 +241,9 @@ local function drawColorsCanvas()
 
     -- draw each color sample rectangle and color name
     for i = 1, #colorList do -- (could have used ipairs)
-        love.graphics.setColor(colorList[i][2], colorList[i][3], colorList[i][4])
+        --love.graphics.setColor(colorList[i][2], colorList[i][3], colorList[i][4])
+        --love.graphics.setColor(colorList[i].rgb[1], colorList[i].rgb[2], colorList[i].rgb[3])
+        love.graphics.setColor(colorList[i].rgb)
 
         y = ccBtoY(i) -- get Y coordinate to use for next button
         love.graphics.rectangle(mode, x, y, buttonWidth, buttonHeight, rx, ry, segments)
@@ -248,10 +251,11 @@ local function drawColorsCanvas()
         love.graphics.setColor(0, 0, 0) -- black text
         -- RGB colors can add up to 3... if they add to <1.5, they're dark, so use whiteish text
         local darkThreshold = 0.7 -- tried values of: 0.7,  1.29,  1.5...
-        if (colorList[i][2] + colorList[i][3] + colorList[i][4]) < darkThreshold then
+        if (colorList[i].rgb[1] + colorList[i].rgb[2] + colorList[i].rgb[3]) < darkThreshold then
             love.graphics.setColor(.7, .7, .7) -- white(ish) text
         end
-        love.graphics.print(colorList[i][1], x + 2, y)
+        --love.graphics.print(colorList[i][1], x + 2, y)
+        love.graphics.print(colorList[i].colorName, x + 2, y)
     end
 end
 
@@ -285,7 +289,9 @@ local function randomizeButtonColors()
 
         buttonObj.color_listNumber = rndItem
         -- kmk we should just remember the button numbers and not save the redundant RGB values...
-        buttonObj.color = { colorList[rndItem][2], colorList[rndItem][3], colorList[rndItem][4] } -- pack into a Table...
+        --buttonObj.color = { colorList[rndItem][2], colorList[rndItem][3], colorList[rndItem][4] } -- pack into a Table...
+        --buttonObj.color = { colorList[rndItem].rgb[1], colorList[rndItem].rgb[2], colorList[rndItem].rgb[3] } -- pack into a Table...
+        buttonObj.color = colorList[rndItem].rgb
     end
 end
 
@@ -329,11 +335,14 @@ local function updateButtonColor() -- update the color of the currently "selecte
     local selectedColor = ccYtoB(ccy) -- get the ID (index) of the Button the cursor is over
     -- print(love.mouse.getY(), ccy, "button", buttonNum,
     --     colorList[buttonNum][1], colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4])
-    local colorObj = colorList[selectedColor]
+    --local colorObj = colorList[selectedColor]
+    local colorObj = colorList[selectedColor].rgb
     local selButtonObj = buttonList[selectedButton]
 
     selButtonObj.color_listNumber = selectedColor -- kmk we could just remember the button numbers and not save the RGB values...
-    selButtonObj.color = { colorObj[2], colorObj[3], colorObj[4] }
+    --selButtonObj.color = { colorObj[2], colorObj[3], colorObj[4] }
+    --selButtonObj.color = { colorObj[1], colorObj[2], colorObj[3] }
+    selButtonObj.color = colorObj
 end
 
 
@@ -526,6 +535,27 @@ end
 
 
 --============================================================================--
+
+--[[ This is the DEFAULT formatColorList(flatTable) for converting 
+    an "easy-entry" 'flat CSV' data format into the 
+    more "self-documenting" table format used by the code, 
+    which needs to end up like this: 
+
+    colorList = { 
+        { colorName = "red",  rgb = { 1, 0, 0 } },
+        { colorName = "blue", rgb = { 0, 0, 1 } },
+        etc... 
+    } 
+
+    Users can use whatever format they like for data entry, and then overwrite 
+    formatColorList() with their own conversion routine if they prefer to. 
+--]]
+
+local function formatColorList(flatTable) -- kmk TODO: make a "default" CSV table version
+
+end
+
+
 --[[  Hex Color stuff -- 
     This section is not "really" part of the Library.  It's just an example 
     of a function that might go in user code, to convert some other color 
@@ -544,7 +574,6 @@ end
     option to reverse order? 
 --]]
 
-
 -- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua {kmk}
 local function Hex2Color(hex, value)
     --return {tonumber(string.sub(hex, 2, 3), 16)/256, tonumber(string.sub(hex, 4, 5), 16)/256, tonumber(string.sub(hex, 6, 7), 16)/256, value or 1}
@@ -554,44 +583,54 @@ local function Hex2Color(hex, value)
 end
 
 
---[[ This is kind of ugly, but it's just a demonstration of how a user may have 
-     a color list in an unusual format, and want to write a little routine to 
-     convert it to the 'standard' format, rather than editing it by hand. 
---]]
-local function convFlatPairsToColorList(flatTable)
+local function formatColorHexList(flatTable) -- Hex table version -- kmk TODO: make a "default" CSV table version
     local stdFormatList = {}
 
     for i = 1, #flatTable, 2 do -- read from input table, 2 at a time
         --print(flatTable[i], flatTable[i + 1])
 
+        -- Each line of this input table has two fields:
+        local colorHexField = i
+        local colorNameField = i + 1
+
         -- convert hex to RGB...
-        local rgb = Hex2Color(flatTable[i])
+        local rgb = Hex2Color(flatTable[colorHexField])
 
         -- add new entry to end of the fixed format list
-        stdFormatList[#stdFormatList + 1] = { flatTable[i + 1], rgb[1], rgb[2], rgb[3] }
+        local newIndex = #stdFormatList + 1
+
+        --stdFormatList[newIndex] = { flatTable[colorNameField], rgb[1], rgb[2], rgb[3] }
+
+        stdFormatList[newIndex] = {}
+        stdFormatList[newIndex].colorName = flatTable[colorNameField]
+        stdFormatList[newIndex].rgb = { rgb[1], rgb[2], rgb[3] }
+        --stdFormatList[newIndex].rgb = rgb
         local tt = stdFormatList[#stdFormatList]
         --print('{' .. tt[1], tt[2], tt[3], tt[4] .. '}')
     end
+
+    flatTable = nil -- Delete the source table (to free memory) now that it's converted to standard format.
     return stdFormatList
 end
 
 
 --============================================================================--
 
-
--- Return the Module functions which can be called from the outside:
+-- Return the Module 'API' functions which can be called from the outside:
 return {
-    keypressed = keypressed,
     load = load,
-    update = update,
+    update = update, -- these correspond to the usual Love2D callback functions...
     draw = draw,
+    keypressed = keypressed,
     wheelmoved = wheelmoved,
     mousepressed = mousepressed,
-    mousereleased = mousereleased, -- callback function
-    buttonList = buttonList, -- data structure
-    randomizeButtonColors = randomizeButtonColors,
+    mousereleased = mousereleased,
 
-    -- This last function is not "really" part of the library, it's just
-    -- a demo of how a user might convert an incompatible list format.
-    convFlatPairsToColorList = convFlatPairsToColorList
+    buttonList = buttonList, -- data structure to access the user buttons
+    randomizeButtonColors = randomizeButtonColors,
+    formatColorList = formatColorList,
+
+    -- This last function is not "really" part of the library, it's just a
+    -- demo of how a user might convert a different custom color list format.
+    formatColorHexList = formatColorHexList
 }

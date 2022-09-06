@@ -83,23 +83,59 @@ local buttonList = { csButton1, csButton2 } -- list of Color-Select Trigger Butt
 
 
 ---------------------------------------------------------------------------------------------
--- kmk: I probably should have put the {RGB}s in a table, so they'd be easier to assign...
--- maybe each colorEntry = { name="", ColorRGB = {r,g,b} } so access is more "self documenting"
+--[[ Note that the  'colorList' table  used at runtime uses named fields, to make the 
+    operation of the code more readable, whereas the initial 'colorListData' definitions 
+    in the config files have more of a simple flat format (CSV = comma separated values) 
+    because it's usually easier to type in list data that way (or to edit in a 
+    spreadsheet and export). 
+
+    The runtime  'colorList'  table format ends up being an Array, with colorName & 'rgb' triples: 
+    local colorList = { 
+        { colorName = "red",  rgb = { 1, 0, 0 } },
+        { colorName = "blue", rgb = { 0, 0, 1 } },
+        etc... 
+    }
+    (The colorList table is an Array to preserve the order the user wants to display them in.) 
+    (If your application needs to frequently access colors by Name, then you should create an 
+    auxiliary hash table to map name to index number.)
+
+    But the initial  'colorListData'  table can be basically any format you like, so long as 
+    you customize the  formatColorList() conversion function.  By default we use a simple 
+    "easy-entry" format which is basically a simple 'Flat' CSV list: 
+
+    local colorListData = {
+        'red',  1, 0, 0,
+        'blue', 0, 0, 1,
+        etc... 
+    }
+    This avoids having to type a lot of {}, and the CSV data can easily be exported from 
+    a spreadsheet, or manipulated in a spreadsheet, etc. 
+--]]
+
+
 local colorList = { -- DEFAULT "test" color list... it's ok for later code to overwrite this.
-    { "Test Colors", 1, 1, 1 },
-    { "Red", 1, 0, 0 },
-    { "Yellow", 1, 1, 0 },
-    { "Magenta", 1, 0, 1 },
-    { "Green", 0, 1, 0 },
-    { "Cyan", 0, 1, 1 },
-    { "Blue", 0, 0, 1 },
-    { "dRed", .6, 0, 0 },
-    { "dYellow", .6, .6, 0 },
-    { "dMagenta", .6, 0, .6 },
-    { "dGreen", 0, .6, 0 },
-    { "dCyan", 0, .6, .6 },
-    { "dBlue", 0, 0, .6 },
+    { colorName = "Test Colors", rgb = { 1, 1, 1 } },
+    { colorName = "Red", rgb = { 1, 0, 0 } },
+    { colorName = "Yellow", rgb = { 1, 1, 0 } },
+    { colorName = "Magenta", rgb = { 1, 0, 1 } },
 }
+
+local colorListData = {  -- Flat list, 4 items per "line" 
+    "Test Colors", 1, 1, 1,
+    "Red", 1, 0, 0,
+    "Yellow", 1, 1, 0,
+    "Magenta", 1, 0, 1,
+    "Green", 0, 1, 0,
+    "Cyan", 0, 1, 1,
+    "Blue", 0, 0, 1,
+    "dRed", .6, 0, 0,
+    "dYellow", .6, .6, 0,
+    "dMagenta", .6, 0, .6,
+    "dGreen", 0, .6, 0,
+    "dCyan", 0, .6, .6,
+    "dBlue", 0, 0, .6,
+}
+
 
 --[[
     kmk: currently the canvas size of the list below is too big for android to handle! 
@@ -109,7 +145,8 @@ local colorList = { -- DEFAULT "test" color list... it's ok for later code to ov
     Determine what the max is for now. 
 --]]
 
--- 3 hex values. need to convert to 3 RGB
+-- Flat list, 2 items per "line" 
+-- 3 hex values. need to convert to 3 RGB values 
 local colorHexList = {
     'FFFFFF', 'White',
     'F7F9F9', 'Snowflake',
