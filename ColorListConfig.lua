@@ -1,6 +1,7 @@
 --[[ ColorListConfig:
     Contains the configurable data to be used by --> ColorListSelector.lua
 
+    
     ToDo: Figure out how much of the code comments to remove from the code 
     and move to external documentation. 
 
@@ -71,26 +72,38 @@ local colorsCanvasData = { -- config for the colorsCanvas
 local userButton1 = {
     text = "Primary", -- text label on the button
     -- kmk todo: specify font size, or compute it, or give user a hook to set it?
-    x = 50,
-    y = 140,
-    width = 300,
-    height = 80,
+    x = 430,
+    y = 10,
+    width = 200,
+    height = 60,
     color = { .6, .4, .4 } -- Starting color (can be anything)
-    -- (incidentally, the "current" color selection is actually tracked 
-    -- by its list index number, in a field called "color_listNumber") 
+    -- (incidentally, the "current" color selection is actually tracked
+    -- by its list index number, in a field called "color_listNumber")
 }
 
 local userButton2 = {
     text = "Secondary",
-    x = 50,
-    y = 250,
-    width = 300,
-    height = 80,
-    color = { .4, .4, .6 } -- Starting color 
+    x = 430,
+    y = 80,
+    width = 200,
+    height = 60,
+    color = { .4, .4, .6 } -- Starting color
 }
 
+
+
+local userButton3 = {
+    text = "Tertiary",
+    x = 430,
+    y = 150,
+    width = 200,
+    height = 60,
+    color = { .4, .6, .4 } -- Starting color
+}
+
+
 -- list of User/App color-select Triggering buttons (rectangle objects) to place on screen
-local buttonList = { userButton1, userButton2 }
+local buttonList = { userButton1, userButton2, userButton3 }
 
 
 --=========================================================================================--
