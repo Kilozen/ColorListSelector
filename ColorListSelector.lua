@@ -202,7 +202,7 @@ local function drawUIcanvas() -- called repeatedly
 end
 
 
-local function createUIcanvas() -- called once
+local function createUIcanvas() -- called only when app window is resized
     -- create the  Canvas that represents the entire App area (within the development 'desktop' canvas)
 
     UIcanvas = love.graphics.newCanvas(UIcanvasData.width, UIcanvasData.height)
@@ -319,7 +319,7 @@ local function load() -- initialization stuff: this should be called from the ma
     colorsCanvasData.yStartDr = 0 -- (the y position of the canvas at the start of a mouse Drag)
     colorsCanvasData.active = false -- color picker begins inactive
 
-    -- initialize non-configurable fields in the User buttons 
+    -- initialize non-configurable fields in the User buttons
     for i = 1, #buttonList do
         buttonList[i].color_listNumber = 1
         buttonList[i].color_previous = buttonList[i].color
@@ -474,20 +474,31 @@ end
 
 
 local function mousereleased(x, y, button, istouch, presses)
-    print("mouse at " .. x, y)
+    -- print("mouse at " .. x, y)
 
     lastClick.active = false -- touch is no longer down... no 'drag' is active.
     -- (we don't want things getting dragged just from mouse movement)
 
-    -- Releasing a *mouse* click dismisses the color picker (finalizes selection) if it wasn't a "drag"
+    -- A mouse "drag" doesn't trigger anything here (it just scrolled the list when in-progress)
+    -- Releasing a *mouse* click dismisses the color picker (finalizes selection) 
     -- Releasing a *touch* (mobile screen) does nothing (keep the color picker visible)
-    -- Clicking (& Releasing) on a color-able button, Selects that button and Activates the color Picker
+    -- Clicking (& Releasing) on a User button, Selects that button and Activates the color Picker
 
 
+    -- Set some State variables to simplify the logic:
+    local click = false -- was it a Drag, or a Click?
+    local colorClick = false -- was it a click ON the color canvas? (a color select?)
     -- if the mouse hasn't been 'dragged' significantly, then something was 'mouseclicked'
-    -- if y == lastClick.y
-    if math.abs(y - lastClick.y) < 5 then
+    if math.abs(y - lastClick.y) < 5 then -- (basically: if y == lastClick.y)
+        click = true
 
+        if colorsCanvasData.active and inColorsCanvas() then
+            colorClick = true
+        end
+    end
+
+    ----------------------- now, make the action decisions -----------------------
+    if click then
         -- print the current button color to the console
         if selectedButton ~= 0 then
             local c = buttonList[selectedButton].color
@@ -503,33 +514,37 @@ local function mousereleased(x, y, button, istouch, presses)
                 updateButtonColor()
             end
         end
-    end
 
 
-    -- check if any Colorable Screen buttons got clicked:
-    for i in ipairs(buttonList) do
-        local b = buttonList[i] -- 'shortcut' to current button
-        if x > b.x and y > b.y and x < (b.x + b.width) and y < (b.y + b.height) then -- if "inside" the button...
-            selectedButton = i
+        if not colorClick then --[[ it was a click somewhere else on the screen. 
+            On small (phone) screens, the color menu might overlap the buttons sometimes,
+            so only register clicks to User buttons if the click was not also on the Colors canvas.
+            --]]
 
-            -- save the starting color before previewing new colors
-            -- b.color_previous = { b.color[1], b.color[2], b.color[3] }
-            b.color_previous = b.color
+            -- check if any User buttons got clicked:
+            for i in ipairs(buttonList) do
+                local b = buttonList[i] -- 'shortcut' to current button
+                if x > b.x and y > b.y and x < (b.x + b.width) and y < (b.y + b.height) then -- if "inside" the button...
+                    selectedButton = i
+
+                    -- save the starting color before previewing new colors
+                    b.color_previous = b.color
 
 
-            local selButtonObj = buttonList[selectedButton]
-            -- selButton.color_listNumber = selectedColor -- kmk we could just remember the button numbers and not save the RGB values...
-            print("button = " .. selectedButton)
-            print("listNumber = " .. selButtonObj.color_listNumber)
+                    local selButtonObj = buttonList[selectedButton]
+                    -- selButton.color_listNumber = selectedColor -- kmk we could just remember the button numbers and not save the RGB values...
+                    -- print("button = " .. selectedButton)
+                    -- print("listNumber = " .. selButtonObj.color_listNumber)
 
-            colorsCanvasData.yPos = -ccBtoY(selButtonObj.color_listNumber) -- position the Selector at the currently set color
-            print("yPos = " .. colorsCanvasData.yPos)
+                    colorsCanvasData.yPos = -ccBtoY(selButtonObj.color_listNumber) -- position the Selector at the currently set color
+                    -- print("yPos = " .. colorsCanvasData.yPos)
 
-            colorsCanvasData.active = true -- Show the color picker
-            -- kmk, could put a break the loop here...
+                    colorsCanvasData.active = true -- Show the color picker
+                    -- kmk, could put a break the loop here...
+                end
+            end
         end
     end
-
 end
 
 
@@ -547,6 +562,16 @@ local function keypressed(key)
         -- scroll up 1 screen height (minus one button size)
         colorsCanvasData.yPos = colorsCanvasData.yPos + (UIcanvasData.height - (buttonHeight + buttonSpacing))
     end
+end
+
+
+function love.resize(w, h)
+    print(("Window resized to width: %d and height: %d."):format(w, h))
+
+    -- if the app window got resized, then update the UI Canvas size as well:
+    UIcanvasData.width = w
+    UIcanvasData.height = h
+    createUIcanvas() -- (have to make a 'new' UI canvas, and re-draw it.)
 end
 
 
