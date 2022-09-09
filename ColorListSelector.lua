@@ -2,6 +2,9 @@ print(...)
 local thisFile = "ColorListSelector.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
+-- local limits = love.graphics.getSystemLimits()
+
+
 --[[ To USE this module...  
     The user application should call two require()s, something like this: 
         require "ColorListConfig" 
@@ -13,6 +16,12 @@ print("[" .. thisFile .. "] loaded/running.")
 
 --[[ ToDos etc. 
     TODO: 
+    - make API function to show/hideUserButtons() 
+    - make API function to randomizeButtonColor() 
+    - make user button flag to assignCallback() 
+    - so 3 types of buttons: colorPick, randomColor, doCallback 
+    - user callback could call randizeButtonColor() for all 3? 
+
     - data fields in ColorListConfig.lua which are not config, but only use by the program should 
       be removed from Config file. 
 
@@ -213,6 +222,10 @@ end
 local function ccBtoY(button) -- colorsCanvas Button # --> Y coord
     -- basically: button number * height ... with a few tweaks.
     local y = (button - 1) * (buttonHeight + buttonSpacing)
+
+    -- print("(button - 1) * (buttonHeight + buttonSpacing)", (button - 1), buttonHeight, buttonSpacing .. " = " .. y)
+    -- (button - 1) * (buttonHeight + buttonSpacing)   231     30      4 = 7854
+
     return y
 end
 
@@ -274,7 +287,15 @@ local function createColorsCanvas()
     local y = ccBtoY(#colorList + 1) -- calculate the Y coordinate of the LAST color button
     colorsCanvasData.height = y -- use that as the color list size (total rectangle height)
 
-    colorsCanvas = love.graphics.newCanvas(colorsCanvasData.width, colorsCanvasData.height)
+    local limits = love.graphics.getSystemLimits()
+    print('GL_MAX_TEXTURE_SIZE = ' .. limits.texturesize)
+    print('colorsCanvasData.height = ' .. colorsCanvasData.height)
+    assert(y < limits.texturesize, "\n\t colorsCanvasData.height > love.graphics.getSystemLimits().texturesize")
+
+    --colorsCanvas = love.graphics.newCanvas(colorsCanvasData.width, colorsCanvasData.height)
+    colorsCanvas = love.graphics.newCanvas(colorsCanvasData.width, colorsCanvasData.height, { dpiscale = 1 })
+    -- if the color list is Large, this canvas can be very tall, and DPI scaling (as on android) can make 
+    -- it 2-4 times taller behind the scenes causing the app to crash.  so use dpiscale=1.  
 
     love.graphics.setCanvas(colorsCanvas) -- draw to the other canvas...
     -- love.graphics.clear(0, 0, 0) -- opaque black
@@ -480,7 +501,7 @@ local function mousereleased(x, y, button, istouch, presses)
     -- (we don't want things getting dragged just from mouse movement)
 
     -- A mouse "drag" doesn't trigger anything here (it just scrolled the list when in-progress)
-    -- Releasing a *mouse* click dismisses the color picker (finalizes selection) 
+    -- Releasing a *mouse* click dismisses the color picker (finalizes selection)
     -- Releasing a *touch* (mobile screen) does nothing (keep the color picker visible)
     -- Clicking (& Releasing) on a User button, Selects that button and Activates the color Picker
 
