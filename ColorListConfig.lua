@@ -1,4 +1,4 @@
---[[ ColorListConfig:
+--[[ ColorListConfig.lua
     Contains the configurable data to be used by --> ColorListSelector.lua
 
     
@@ -10,25 +10,25 @@
     variables into these same data structures (such as the current position 
     of a scrolling menu), but the user should not need to be aware of that.]  
 
-    The user app must "require "ColorListConfig", but rather than modifying this 
-    file where it is, the user app would likely make a local copy of this file 
-    somewhere convenient, and modify it and 'require()' that modified copy. 
+    The user app must "require "ColorListConfig".  But rather than modifying 
+    this file where it is, the user app may prefer to make a local copy of this 
+    file somewhere convenient, and modify it and 'require()' that modified copy. 
 
     Two kinds of "Buttons" are mentioned:
-    The Application/User-defined buttons, which trigger the Color Selector menu,
-    and "remember" the current color choices.
-    And the auto-generated buttons in the long color Selector List.
+    The Application/User-defined buttons, which trigger the Color Selector menu
+    (and they "remember" the current color choices).
+    And the auto-generated buttons in the long color list to select from.
 --]]
 
 -- set the size/spacing of the Color buttons in the color List menu
-local buttonHeight = 30 -- default 30
-local buttonSpacing = 4 -- default 6.. maybe 4
+local buttonHeight = 30 -- default 30.  (Keep mobile touchscreens in mind.) 
+local buttonSpacing = 4 -- default 4
 
 
 local UIcanvasData = {
     --[[
-        The "full screen" of the UI (small smartphone size by default) 
-        Everything specified in ColorListConfig.lua is drawn on THIS canvas. 
+        The "full screen" of the UI (a small smartphone size by default) 
+        Everything specified in ColorListConfig.lua is drawn onto THIS canvas. 
         Normally, you'll just want to make this canvas the same dimensions 
         that your overall "app" window is.  It will be drawn on top of your app 
         (but its background is transparent, so your other content shows through.)
@@ -51,7 +51,7 @@ local colorsCanvasData = { -- config for the colorsCanvas
     --]]
     xPos = 400, -- x position on the app screen
     yPos = 0, -- initial y position (this value will change when user scrolls the window)
-    width = 200, -- ('height' is calculated based on list length)
+    width = 150, -- ('height' is calculated based on list length)
     speed = 8, -- scroll speed for things like arrow keys
     -- Normally the canvas background color should be left as transparent black,
     -- but sometimes it's useful set a slight color to be able to see the boundaries.
@@ -74,7 +74,7 @@ local userButton1 = {
     -- kmk todo: specify font size, or compute it, or give user a hook to set it?
     x = 430,
     y = 10,
-    width = 200,
+    width = 180,
     height = 60,
     color = { .6, .4, .4 } -- Starting color (can be anything)
     -- (incidentally, the "current" color selection is actually tracked
@@ -85,22 +85,19 @@ local userButton2 = {
     text = "Secondary",
     x = 430,
     y = 80,
-    width = 200,
+    width = 180,
     height = 60,
     color = { .4, .4, .6 } -- Starting color
 }
-
-
 
 local userButton3 = {
     text = "Tertiary",
     x = 430,
     y = 150,
-    width = 200,
+    width = 180,
     height = 60,
     color = { .4, .6, .4 } -- Starting color
 }
-
 
 -- list of User/App color-select Triggering buttons (rectangle objects) to place on screen
 local buttonList = { userButton1, userButton2, userButton3 }
@@ -142,6 +139,9 @@ local colorList = { -- DEFAULT "test" color list... it's ok for later code to ov
     { colorName = "Red", rgb = { 1, 0, 0 } },
     { colorName = "Yellow", rgb = { 1, 1, 0 } },
     { colorName = "Magenta", rgb = { 1, 0, 1 } },
+    { colorName = "Green", rgb = { 0, 1, 0 } },
+    { colorName = "Cyan", rgb = { 0, 1, 1 } },
+    { colorName = "Blue", rgb = { 0, 0, 1 } },
 }
 --[[ Above is the format the code actually uses internally, but it's 
     a pain to edit all that verbosity, so, below is an easier-to-type 
