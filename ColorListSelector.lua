@@ -6,6 +6,8 @@ print("[" .. thisFile .. "] loaded/running.")
 
 
 --[[ To USE this module...  
+    This was originally written for Love2d version 11.4 
+
     The user application should call two require()s, something like this: 
         require "ColorListConfig" 
         local CLS = require "ColorListSelector" 
@@ -168,10 +170,10 @@ local colorsCanvas = {} -- pre-declare the canvas object to be Local.
 
 local lastClick = { -- save x,y info of last initiation of a mouse click or touch (for dragging operations)
     active = false,
-    -- x = 0,
-    y = 0
+    x = 0,
+    y = 0,
+    istouch = false
 }
-
 
 
 local function drawAppContent()
@@ -292,10 +294,10 @@ local function createColorsCanvas()
     print('colorsCanvasData.height = ' .. colorsCanvasData.height)
     assert(y < limits.texturesize, "\n\t colorsCanvasData.height > love.graphics.getSystemLimits().texturesize")
 
-    --colorsCanvas = love.graphics.newCanvas(colorsCanvasData.width, colorsCanvasData.height)
+    --colorsCanvas = love.graphics.newCanvas(colorsCanvasData.width, colorsCanvasData.height) -- Don't Use This Line
     colorsCanvas = love.graphics.newCanvas(colorsCanvasData.width, colorsCanvasData.height, { dpiscale = 1 })
-    -- if the color list is Large, this canvas can be very tall, and DPI scaling (as on android) can make 
-    -- it 2-4 times taller behind the scenes causing the app to crash.  so use dpiscale=1.  
+    -- if the color list is Large, this canvas can be very tall, and DPI scaling (as on android) can make
+    -- it 2-4 times taller behind the scenes causing the app to crash.  so use dpiscale=1 for this canvas.
 
     love.graphics.setCanvas(colorsCanvas) -- draw to the other canvas...
     -- love.graphics.clear(0, 0, 0) -- opaque black
@@ -371,14 +373,11 @@ local function updateButtonColor() -- update the color of the currently "selecte
     local selectedColor = ccYtoB(ccy) -- get the ID (index) of the Button the cursor is over
     -- print(love.mouse.getY(), ccy, "button", buttonNum,
     --     colorList[buttonNum][1], colorList[buttonNum][2], colorList[buttonNum][3], colorList[buttonNum][4])
-    --local colorObj = colorList[selectedColor]
     local colorObj = colorList[selectedColor].rgb
-    local selButtonObj = buttonList[selectedButton]
+    local selButtonObj = buttonList[selectedButton] -- the current 'User' button
 
-    selButtonObj.color_listNumber = selectedColor -- kmk we could just remember the button numbers and not save the RGB values...
-    --selButtonObj.color = { colorObj[2], colorObj[3], colorObj[4] }
-    --selButtonObj.color = { colorObj[1], colorObj[2], colorObj[3] }
     selButtonObj.color = colorObj
+    selButtonObj.color_listNumber = selectedColor -- remember the button number
 end
 
 
@@ -458,30 +457,36 @@ local function draw() -- this is the whatever functionality needs to happen duri
         --colorsCanvasData.yPos = colorsCanvasData.yPos + 1 -- auto drift
     end
 
-    -- draw a little box to show where a click/touch happened
+    -- -- draw a little box to show where a click/touch happened 
     -- if lastClick.active then
-    --     love.graphics.setColor(.7, .7, 0)
+    --     love.graphics.setColor(0, 1, 0)
+    --     -- make it Orange if it detected a Touchscreen
+    --     if lastClick.istouch then
+    --         love.graphics.setColor(1, .5, 0)
+    --     end
     --     love.graphics.rectangle("fill", lastClick.x, lastClick.y, 10, 10)
     -- end
 end
 
 
-local function mousepressed(x, y, button, istouch, presses) -- keep both mouse & touchscreeen in mind here!
+local function mousepressed(x, y, unused, istouch, unused) -- keep both mouse & touchscreeen in mind here!
+    --[[
+        Clicking (anywhere) enables possible dragging operations. 
+        Clicking *away* from active areas, dismisses the color picker (and de-selects any buttons)
+        (colors are actually "Selected" elsewhere, in the .update() function, based on x,y hover coordinates)
 
-    -- Clicking (anywhere) enables possible dragging operations
-    -- Clicking *away* from active areas, dismisses the color picker (and de-selects any buttons)
-    -- (colors are actually "Selected" elsewhere, in the .update() function, based on x,y hover coordinates)
+        --> see .mousereleased() for the following funcitonality:
+        Releasing on a color-able button, Selects that button and Activates the color Picker
+        Releasing a *touch* (mobile screen) does nothing
+        Releasing a *mouse* click dismisses the color picker (finalizes selection) if it wasn't a "drag"
+    --]]
+    assert(istouch ~= nil)
 
-    --> see .mousereleased() for the following funcitonality:
-    -- Releasing on a color-able button, Selects that button and Activates the color Picker
-    -- Releasing a *touch* (mobile screen) does nothing
-    -- Releasing a *mouse* click dismisses the color picker (finalizes selection) if it wasn't a "drag"
-
-
-    -- keeping track of the last mouse-down gets used in *dragging* interactions
+    -- keeping track of the last mouse-down is used in *dragging* interactions (and test/debug)
     lastClick.active = true
-    --lastClick.x = x
+    lastClick.x = x  -- (not needed currently, but helpful in testing)
     lastClick.y = y
+    lastClick.istouch = istouch
     colorsCanvasData.yStartDr = colorsCanvasData.yPos -- save current Y position of ColorsCanvas, in case it gets dragged
 
 
@@ -490,23 +495,23 @@ local function mousepressed(x, y, button, istouch, presses) -- keep both mouse &
         selectedButton = 0 -- de-select current color-able button
         colorsCanvasData.active = false -- dismiss the color picker
     end
-
 end
 
 
-local function mousereleased(x, y, button, istouch, presses)
+local function mousereleased(x, y, unused, istouch, unused)
     -- print("mouse at " .. x, y)
+    --[[
+        A mouse "drag" doesn't trigger anything here (it just scrolled the list when in-progress)
+        Releasing a *mouse* click dismisses the color picker (finalizes selection)
+        Releasing a *touch* (mobile screen) does nothing here (keep the color picker visible)
+        Clicking (& Releasing) on a User button, Selects that button and Activates the color Picker
+    --]]
+    assert(istouch ~= nil)
 
     lastClick.active = false -- touch is no longer down... no 'drag' is active.
     -- (we don't want things getting dragged just from mouse movement)
 
-    -- A mouse "drag" doesn't trigger anything here (it just scrolled the list when in-progress)
-    -- Releasing a *mouse* click dismisses the color picker (finalizes selection)
-    -- Releasing a *touch* (mobile screen) does nothing (keep the color picker visible)
-    -- Clicking (& Releasing) on a User button, Selects that button and Activates the color Picker
-
-
-    -- Set some State variables to simplify the logic:
+    -- Set some State variables to simplify the logic readability:
     local click = false -- was it a Drag, or a Click?
     local colorClick = false -- was it a click ON the color canvas? (a color select?)
     -- if the mouse hasn't been 'dragged' significantly, then something was 'mouseclicked'
@@ -569,7 +574,7 @@ local function mousereleased(x, y, button, istouch, presses)
 end
 
 
-local function wheelmoved(x, y)
+local function wheelmoved(unused, y)
     colorsCanvasData.yPos = colorsCanvasData.yPos + (y * 20) -- speed & direction probably need to be configurable...
 end
 
