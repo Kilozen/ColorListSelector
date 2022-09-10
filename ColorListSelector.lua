@@ -2,9 +2,6 @@ print(...)
 local thisFile = "ColorListSelector.lua"
 print("[" .. thisFile .. "] loaded/running.")
 
--- local limits = love.graphics.getSystemLimits()
-
-
 --[[ To USE this module...  
     This was originally written for Love2d version 11.4 
 
@@ -18,18 +15,19 @@ print("[" .. thisFile .. "] loaded/running.")
 
 --[[ ToDos etc. 
     TODO: 
+    - org: consider always putting closely related functions together into a  do-end  block. 
+    so they're collapsable together, and you know they're not visible to functions which don't call them.  
+    or putting them in a named table, so you can reach their name from the outside if you need to. 
+
     - make API function to show/hideUserButtons() 
     - make API function to randomizeButtonColor() 
     - make user button flag to assignCallback() 
     - so 3 types of buttons: colorPick, randomColor, doCallback 
     - user callback could call randizeButtonColor() for all 3? 
 
-    - data fields in ColorListConfig.lua which are not config, but only use by the program should 
-      be removed from Config file. 
-
-    - 'remember' all colors by their list index, don't redundantly store their RGB values 
-
-    - Touchscreen quit working... click dismisses the list... why?  kmkmk 
+    - rewrite in a more "object oriented" style?  create a button class here, 
+      with its related functions, and instantiate in the config file?  
+      group canvas functions with their object.  
 
     - maybe print the color Names on the select buttons also. 
       (and their RGB or Hex values?)
@@ -159,6 +157,7 @@ local buttonList       = CLSconfig.buttonList
 
 ---------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------
+-- local limits = love.graphics.getSystemLimits()
 
 local selectedButton = 0 -- integer: the Currently Selected (touched) button number from <-- CLSconfig.buttonList
 local touchscreen = false -- detect & set this during init
@@ -176,38 +175,41 @@ local lastClick = { -- save x,y info of last initiation of a mouse click or touc
 }
 
 
-local function drawAppContent()
-    -- Most of the User App content would be drawn in the user's own program.
-    -- This will probably only draw the color-select buttons they configure.
-
-    for i in ipairs(buttonList) do
-        local x = buttonList[i].x
-        local y = buttonList[i].y
-        local recWidth = buttonList[i].width
-        local recHeight = buttonList[i].height
-
-        love.graphics.setColor(buttonList[i].color)
-
-        local mode = "fill"
-        local rx = nil -- 10  -- if you want rounded corners...
-        local ry = nil
-        local segments = nil -- 5
-        love.graphics.rectangle(mode, x, y, recWidth, recHeight, rx, ry, segments)
-
-        love.graphics.setColor(0, 0, 0)
-        love.graphics.print(buttonList[i].text, x + 10, y + 10)
-    end
-end
-
-
 local function drawUIcanvas() -- called repeatedly
+
     love.graphics.setColor(1, 1, 1)
     love.graphics.setCanvas(UIcanvas) -- draw to the other canvas...
     --love.graphics.clear(0, 0, 0) -- opaque black
     --love.graphics.clear() -- transparent black
     --love.graphics.clear(0, 0, 1, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
     love.graphics.clear(UIcanvasData.bgColor)
+
+    local function drawAppContent()
+        -- Most of the User App content would be drawn in the user's own program.
+        -- This will probably only draw the color-select buttons they configure.
+
+        for i in ipairs(buttonList) do
+            local x = buttonList[i].x
+            local y = buttonList[i].y
+            local recWidth = buttonList[i].width
+            local recHeight = buttonList[i].height
+
+            love.graphics.setColor(buttonList[i].color)
+
+            local mode = "fill"
+            local rx = nil -- 10  -- if you want rounded corners...
+            local ry = nil
+            local segments = nil -- 5
+            love.graphics.rectangle(mode, x, y, recWidth, recHeight, rx, ry, segments)
+
+            love.graphics.setColor(0, 0, 0)
+            love.graphics.print(buttonList[i].text, x + 10, y + 10)
+        end
+    end
+
+
     drawAppContent()
+
     love.graphics.setCanvas() -- re-enable drawing to the main screen
     love.graphics.setColor(1, 1, 1)
 end
@@ -247,40 +249,6 @@ local function ccYtoB(y) -- colorsCanvas Y coord --> Button #
 end
 
 
--- draw the CONTENT of the color show/select canvas (this is only done once)
-local function drawColorsCanvas()
-    local mode = "fill"
-    local x = 0
-    local y = 0
-    local buttonWidth = colorsCanvasData.width
-    --local recHeight = 40
-    local rx = nil -- 10 -- (if you want rounded corners)
-    local ry = nil
-    local segments = nil -- 5
-
-    love.graphics.setFont(love.graphics.newFont(buttonHeight - 6))
-
-    -- draw each color sample rectangle and color name
-    for i = 1, #colorList do -- (could have used ipairs)
-        --love.graphics.setColor(colorList[i][2], colorList[i][3], colorList[i][4])
-        --love.graphics.setColor(colorList[i].rgb[1], colorList[i].rgb[2], colorList[i].rgb[3])
-        love.graphics.setColor(colorList[i].rgb)
-
-        y = ccBtoY(i) -- get Y coordinate to use for next button
-        love.graphics.rectangle(mode, x, y, buttonWidth, buttonHeight, rx, ry, segments)
-
-        love.graphics.setColor(0, 0, 0) -- black text
-        -- RGB colors can add up to 3... if they add to <1.5, they're dark, so use whiteish text
-        local darkThreshold = 0.7 -- tried values of: 0.7,  1.29,  1.5...
-        if (colorList[i].rgb[1] + colorList[i].rgb[2] + colorList[i].rgb[3]) < darkThreshold then
-            love.graphics.setColor(.7, .7, .7) -- white(ish) text
-        end
-        --love.graphics.print(colorList[i][1], x + 2, y)
-        love.graphics.print(colorList[i].colorName, x + 2, y)
-    end
-end
-
-
 local function createColorsCanvas()
     -- Create the movable Canvas to put the color list on.
     -- just create the canvas object, and draw it (once) in the background.
@@ -304,7 +272,44 @@ local function createColorsCanvas()
     -- love.graphics.clear() -- transparent black
     -- love.graphics.clear(0, 1, 0, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
     love.graphics.clear(colorsCanvasData.bgColor)
+
+
+    local function drawColorsCanvas()
+        -- draw the CONTENT of the color show/select canvas (this is only done once)
+        local mode = "fill"
+        local x = 0
+        local y = 0
+        local buttonWidth = colorsCanvasData.width
+        --local recHeight = 40
+        local rx = nil -- 10 -- (if you want rounded corners)
+        local ry = nil
+        local segments = nil -- 5
+
+        love.graphics.setFont(love.graphics.newFont(buttonHeight - 6))
+
+        -- draw each color sample rectangle and color name
+        for i = 1, #colorList do -- (could have used ipairs)
+            --love.graphics.setColor(colorList[i][2], colorList[i][3], colorList[i][4])
+            --love.graphics.setColor(colorList[i].rgb[1], colorList[i].rgb[2], colorList[i].rgb[3])
+            love.graphics.setColor(colorList[i].rgb)
+
+            y = ccBtoY(i) -- get Y coordinate to use for next button
+            love.graphics.rectangle(mode, x, y, buttonWidth, buttonHeight, rx, ry, segments)
+
+            love.graphics.setColor(0, 0, 0) -- black text
+            -- RGB colors can add up to 3... if they add to <1.5, they're dark, so use whiteish text
+            local darkThreshold = 0.7 -- tried values of: 0.7,  1.29,  1.5...
+            if (colorList[i].rgb[1] + colorList[i].rgb[2] + colorList[i].rgb[3]) < darkThreshold then
+                love.graphics.setColor(.7, .7, .7) -- white(ish) text
+            end
+            --love.graphics.print(colorList[i][1], x + 2, y)
+            love.graphics.print(colorList[i].colorName, x + 2, y)
+        end
+    end
+
+
     drawColorsCanvas()
+
     love.graphics.setCanvas() -- re-enable drawing to the main screen
 end
 
@@ -457,7 +462,7 @@ local function draw() -- this is the whatever functionality needs to happen duri
         --colorsCanvasData.yPos = colorsCanvasData.yPos + 1 -- auto drift
     end
 
-    -- -- draw a little box to show where a click/touch happened 
+    -- -- draw a little box to show where a click/touch happened
     -- if lastClick.active then
     --     love.graphics.setColor(0, 1, 0)
     --     -- make it Orange if it detected a Touchscreen
@@ -484,7 +489,7 @@ local function mousepressed(x, y, unused, istouch, unused) -- keep both mouse & 
 
     -- keeping track of the last mouse-down is used in *dragging* interactions (and test/debug)
     lastClick.active = true
-    lastClick.x = x  -- (not needed currently, but helpful in testing)
+    lastClick.x = x -- (not needed currently, but helpful in testing)
     lastClick.y = y
     lastClick.istouch = istouch
     colorsCanvasData.yStartDr = colorsCanvasData.yPos -- save current Y position of ColorsCanvas, in case it gets dragged
@@ -591,7 +596,7 @@ local function keypressed(key)
 end
 
 
-function love.resize(w, h)
+local function resize(w, h)
     print(("Window resized to width: %d and height: %d."):format(w, h))
 
     -- if the app window got resized, then update the UI Canvas size as well:
@@ -662,15 +667,6 @@ end
     option to reverse order? 
 --]]
 
--- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua {kmk}
-local function Hex2Color(hex, value)
-    --return {tonumber(string.sub(hex, 2, 3), 16)/256, tonumber(string.sub(hex, 4, 5), 16)/256, tonumber(string.sub(hex, 6, 7), 16)/256, value or 1}
-    return { tonumber(string.sub(hex, 1, 2), 16) / 256,
-        tonumber(string.sub(hex, 3, 4), 16) / 256,
-        tonumber(string.sub(hex, 5, 6), 16) / 256, value or 1 }
-end
-
-
 local function formatColorHexList(flatTable) -- Hex table version -- kmk TODO: make a "default" CSV table version
     local stdFormatList = {}
 
@@ -682,6 +678,14 @@ local function formatColorHexList(flatTable) -- Hex table version -- kmk TODO: m
         local colorNameField = i + 1
 
         -- convert hex to RGB...
+        local function Hex2Color(hex, value)
+            -- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua {kmk}
+            return { tonumber(string.sub(hex, 1, 2), 16) / 256,
+                tonumber(string.sub(hex, 3, 4), 16) / 256,
+                tonumber(string.sub(hex, 5, 6), 16) / 256, value or 1 }
+        end
+
+
         local rgb = Hex2Color(flatTable[colorHexField])
 
         -- add new entry to end of the fixed format list
@@ -713,6 +717,7 @@ return {
     wheelmoved = wheelmoved,
     mousepressed = mousepressed,
     mousereleased = mousereleased,
+    resize = resize,
 
     buttonList = buttonList, -- data structure to access the user buttons
     randomizeButtonColors = randomizeButtonColors,
@@ -721,4 +726,5 @@ return {
     -- This last function is not "really" part of the library, it's just a
     -- demo of how a user might convert a different custom color list format.
     formatColorHexList = formatColorHexList
-}
+
+} -- return ColorListSelector API --
