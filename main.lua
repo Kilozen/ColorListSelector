@@ -98,12 +98,12 @@ end
 function love.mousepressed(x, y, button, istouch, presses)
     -- (user code here if desired)
 
-    CLS.mousepressed(x, y)
+    CLS.mousepressed(x, y, button, istouch, presses)
 end
 
 
 function love.mousereleased(x, y, button, istouch, presses)
     -- (user code here if desired)
 
-    CLS.mousereleased(x, y)
+    CLS.mousereleased(x, y, button, istouch, presses)
 end
