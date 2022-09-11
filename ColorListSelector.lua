@@ -174,6 +174,30 @@ local lastClick = { -- save x,y info of last initiation of a mouse click or touc
     istouch = false
 }
 
+--------------------------------------------------------------------------------
+local function drawAppContent()
+    -- Most of the User App content would be drawn in the user's own program.
+    -- This will probably only draw the color-select buttons they configure.
+
+    for i in ipairs(buttonList) do
+        local x = buttonList[i].x
+        local y = buttonList[i].y
+        local recWidth = buttonList[i].width
+        local recHeight = buttonList[i].height
+
+        love.graphics.setColor(buttonList[i].color)
+
+        local mode = "fill"
+        local rx = nil -- 10  -- if you want rounded corners...
+        local ry = nil
+        local segments = nil -- 5
+        love.graphics.rectangle(mode, x, y, recWidth, recHeight, rx, ry, segments)
+
+        love.graphics.setColor(0, 0, 0)
+        love.graphics.print(buttonList[i].text, x + 10, y + 10)
+    end
+end
+
 
 local function drawUIcanvas() -- called repeatedly
 
@@ -183,30 +207,6 @@ local function drawUIcanvas() -- called repeatedly
     --love.graphics.clear() -- transparent black
     --love.graphics.clear(0, 0, 1, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
     love.graphics.clear(UIcanvasData.bgColor)
-
-    local function drawAppContent()
-        -- Most of the User App content would be drawn in the user's own program.
-        -- This will probably only draw the color-select buttons they configure.
-
-        for i in ipairs(buttonList) do
-            local x = buttonList[i].x
-            local y = buttonList[i].y
-            local recWidth = buttonList[i].width
-            local recHeight = buttonList[i].height
-
-            love.graphics.setColor(buttonList[i].color)
-
-            local mode = "fill"
-            local rx = nil -- 10  -- if you want rounded corners...
-            local ry = nil
-            local segments = nil -- 5
-            love.graphics.rectangle(mode, x, y, recWidth, recHeight, rx, ry, segments)
-
-            love.graphics.setColor(0, 0, 0)
-            love.graphics.print(buttonList[i].text, x + 10, y + 10)
-        end
-    end
-
 
     drawAppContent()
 
@@ -222,6 +222,8 @@ local function createUIcanvas() -- called only when app window is resized
     drawUIcanvas()
 end
 
+
+--------------------------------------------------------------------------------
 
 local function ccBtoY(button) -- colorsCanvas Button # --> Y coord
     -- basically: button number * height ... with a few tweaks.
@@ -249,6 +251,41 @@ local function ccYtoB(y) -- colorsCanvas Y coord --> Button #
 end
 
 
+--------------------------------------------------------------------------------
+local function drawColorsCanvas()
+    -- draw the CONTENT of the color show/select canvas (this is only done once)
+    local mode = "fill"
+    local x = 0
+    local y = 0
+    local buttonWidth = colorsCanvasData.width
+    --local recHeight = 40
+    local rx = nil -- 10 -- (if you want rounded corners)
+    local ry = nil
+    local segments = nil -- 5
+
+    love.graphics.setFont(love.graphics.newFont(buttonHeight - 6))
+
+    -- draw each color sample rectangle and color name
+    for i = 1, #colorList do -- (could have used ipairs)
+        --love.graphics.setColor(colorList[i][2], colorList[i][3], colorList[i][4])
+        --love.graphics.setColor(colorList[i].rgb[1], colorList[i].rgb[2], colorList[i].rgb[3])
+        love.graphics.setColor(colorList[i].rgb)
+
+        y = ccBtoY(i) -- get Y coordinate to use for next button
+        love.graphics.rectangle(mode, x, y, buttonWidth, buttonHeight, rx, ry, segments)
+
+        love.graphics.setColor(0, 0, 0) -- black text
+        -- RGB colors can add up to 3... if they add to <1.5, they're dark, so use whiteish text
+        local darkThreshold = 0.7 -- tried values of: 0.7,  1.29,  1.5...
+        if (colorList[i].rgb[1] + colorList[i].rgb[2] + colorList[i].rgb[3]) < darkThreshold then
+            love.graphics.setColor(.7, .7, .7) -- white(ish) text
+        end
+        --love.graphics.print(colorList[i][1], x + 2, y)
+        love.graphics.print(colorList[i].colorName, x + 2, y)
+    end
+end
+
+
 local function createColorsCanvas()
     -- Create the movable Canvas to put the color list on.
     -- just create the canvas object, and draw it (once) in the background.
@@ -273,46 +310,12 @@ local function createColorsCanvas()
     -- love.graphics.clear(0, 1, 0, 0.2) -- TEST: color (translucent) the sub-canvas to make its boundaries visible for dev.
     love.graphics.clear(colorsCanvasData.bgColor)
 
-
-    local function drawColorsCanvas()
-        -- draw the CONTENT of the color show/select canvas (this is only done once)
-        local mode = "fill"
-        local x = 0
-        local y = 0
-        local buttonWidth = colorsCanvasData.width
-        --local recHeight = 40
-        local rx = nil -- 10 -- (if you want rounded corners)
-        local ry = nil
-        local segments = nil -- 5
-
-        love.graphics.setFont(love.graphics.newFont(buttonHeight - 6))
-
-        -- draw each color sample rectangle and color name
-        for i = 1, #colorList do -- (could have used ipairs)
-            --love.graphics.setColor(colorList[i][2], colorList[i][3], colorList[i][4])
-            --love.graphics.setColor(colorList[i].rgb[1], colorList[i].rgb[2], colorList[i].rgb[3])
-            love.graphics.setColor(colorList[i].rgb)
-
-            y = ccBtoY(i) -- get Y coordinate to use for next button
-            love.graphics.rectangle(mode, x, y, buttonWidth, buttonHeight, rx, ry, segments)
-
-            love.graphics.setColor(0, 0, 0) -- black text
-            -- RGB colors can add up to 3... if they add to <1.5, they're dark, so use whiteish text
-            local darkThreshold = 0.7 -- tried values of: 0.7,  1.29,  1.5...
-            if (colorList[i].rgb[1] + colorList[i].rgb[2] + colorList[i].rgb[3]) < darkThreshold then
-                love.graphics.setColor(.7, .7, .7) -- white(ish) text
-            end
-            --love.graphics.print(colorList[i][1], x + 2, y)
-            love.graphics.print(colorList[i].colorName, x + 2, y)
-        end
-    end
-
-
     drawColorsCanvas()
-
     love.graphics.setCanvas() -- re-enable drawing to the main screen
 end
 
+
+--------------------------------------------------------------------------------
 
 local function randomizeButtonColors()
 
@@ -667,6 +670,15 @@ end
     option to reverse order? 
 --]]
 
+-- convert hex to RGB...
+local function Hex2Color(hex, value)
+    -- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua {kmk}
+    return { tonumber(string.sub(hex, 1, 2), 16) / 256,
+        tonumber(string.sub(hex, 3, 4), 16) / 256,
+        tonumber(string.sub(hex, 5, 6), 16) / 256, value or 1 }
+end
+
+
 local function formatColorHexList(flatTable) -- Hex table version -- kmk TODO: make a "default" CSV table version
     local stdFormatList = {}
 
@@ -676,15 +688,6 @@ local function formatColorHexList(flatTable) -- Hex table version -- kmk TODO: m
         -- Each line of this input table has two fields:
         local colorHexField = i
         local colorNameField = i + 1
-
-        -- convert hex to RGB...
-        local function Hex2Color(hex, value)
-            -- This function was modified from: https://github.com/s-walrus/hex2color/blob/master/hex2color.lua {kmk}
-            return { tonumber(string.sub(hex, 1, 2), 16) / 256,
-                tonumber(string.sub(hex, 3, 4), 16) / 256,
-                tonumber(string.sub(hex, 5, 6), 16) / 256, value or 1 }
-        end
-
 
         local rgb = Hex2Color(flatTable[colorHexField])
 
