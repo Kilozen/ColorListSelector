@@ -143,7 +143,7 @@ print("[" .. thisFile .. "] loaded/running.")
     (It looks a bit odd below to be giving local 'shortcut' names that aren't much shorter, but
     these were the local names I was already using before I moved them outside of this file...)
 
-    kmk todo - maybe I should get rid of these local copies, because if the user
+    kmkmk todo - maybe I should get rid of these local copies, because if the user
     is updating any 'plain values' dynamically, this library won't get the update!
 --]]
 
@@ -217,6 +217,10 @@ end
 
 local function createUIcanvas() -- called only when app window is resized
     -- create the  Canvas that represents the entire App area (within the development 'desktop' canvas)
+
+    -- set UIcanvasData.width & .height to match the size of the App Window
+    UIcanvasData.width = love.graphics.getWidth() -- window width (it might be resizable)
+    UIcanvasData.height = love.graphics.getHeight()
 
     UIcanvas = love.graphics.newCanvas(UIcanvasData.width, UIcanvasData.height)
     drawUIcanvas()
@@ -330,6 +334,7 @@ local function randomizeButtonColors()
         --buttonObj.color = { colorList[rndItem].rgb[1], colorList[rndItem].rgb[2], colorList[rndItem].rgb[3] } -- pack into a Table...
         buttonObj.color = colorList[rndItem].rgb
     end
+    -- kmk todo: make a more custom function, which limits how different the Brightnesses can be.
 end
 
 
@@ -605,6 +610,10 @@ local function resize(w, h)
     -- if the app window got resized, then update the UI Canvas size as well:
     UIcanvasData.width = w
     UIcanvasData.height = h
+    -- (we could probably also get these values from: )
+    -- lg.getWidth()
+    -- lg.getHeight()
+
     createUIcanvas() -- (have to make a 'new' UI canvas, and re-draw it.)
 end
 
